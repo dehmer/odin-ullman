@@ -9,7 +9,8 @@ const RULES = {
   javascript: {
     test: /\.js$/,
     exclude: /node_modules/,
-    use: ['babel-loader', 'eslint-loader']
+    // use: ['babel-loader', 'eslint-loader']
+    use: ['babel-loader']
   },
 
   css: {

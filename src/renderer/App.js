@@ -1,5 +1,16 @@
 import React from 'react'
+import { Map } from './map/Map'
+import { PanelContainer } from './panels/PanelContainer'
+import './search'
 
-export const App = props => {
-  return <div>{JSON.stringify(process.versions, null, 2)}</div>
+/**
+ * <Map/> and <App/> are siblings with <body/> as parent.
+ */
+export const App = () => {
+  return (
+    <>
+      <Map></Map>
+      <PanelContainer></PanelContainer>
+    </>
+  )
 }
