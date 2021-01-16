@@ -1,5 +1,5 @@
 import React from 'react'
-import TagList from '../components/TagList'
+import TagList from './TagList'
 import emitter from '../emitter'
 
 const scopes = ['ALL', 'LAYER', 'FEATURE', 'LINK', 'GROUP', 'SYMBOL', 'PLACE']
