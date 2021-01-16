@@ -1,6 +1,5 @@
 import Mousetrap from 'mousetrap'
 import Draw from 'ol/interaction/Draw'
-import { GeoJSON } from 'ol/format'
 import emitter from '../../emitter'
 import { drawOptions } from './draw-options'
 

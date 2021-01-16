@@ -5,7 +5,7 @@ import { lineStyle } from './line-style'
 import { multipointStyle } from './multipoint-style'
 import { collectionStyle } from './collection-style'
 import { symbolStyle } from './symbol-style'
-import cache from 'js-cache'
+import Cache from 'js-cache'
 
 /**
  * normalizeSIDC :: String -> String
@@ -17,7 +17,7 @@ export const normalizeSIDC = sidc => sidc
 
 const cachingProvider = (provider, source) => {
   const cachekey = feature => `${feature.getId()}`
-  const styleCache = new cache()
+  const styleCache = new Cache()
 
   source.on('removefeature', ({ feature }) => {
     styleCache.del(cachekey(feature))

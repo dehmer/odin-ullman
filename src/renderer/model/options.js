@@ -15,8 +15,8 @@ export const options = {}
 options.feature = (() => {
   const tags = ({ hidden, tags, links }, sidc) => [
     'SCOPE:FEATURE:identify',
-    ...((links || []).length ? [`IMAGE:LINKS:links:mdiLink`] : []),
-    hidden ? 'SYSTEM:HIDDEN:show' : `SYSTEM:VISIBLE:hide`,
+    ...((links || []).length ? ['IMAGE:LINKS:links:mdiLink'] : []),
+    hidden ? 'SYSTEM:HIDDEN:show' : 'SYSTEM:VISIBLE:hide',
     ...dimensions(sidc).map(label => `SYSTEM:${label}:NONE`),
     ...scopes(sidc).map(label => `SYSTEM:${label}:NONE`),
     ...(identity(sidc)).map(label => `SYSTEM:${label}:NONE`),
@@ -25,7 +25,7 @@ options.feature = (() => {
 
   const option = feature => {
     const layer = storage.getItem(layerId(feature.id))
-    const { properties } = feature
+    const { properties } = feature
     const { sidc, t } = properties
     const description = layer.name.toUpperCase() + ' ⏤ ' + hierarchy(sidc).join(' • ')
 
@@ -63,7 +63,7 @@ options.group = (() => {
       tags: [
         'GROUP:GROUP:identify',
         ...(group.scope || []).map(label => `SCOPE:${label}:NONE`),
-        `IMAGE:OPEN:open:mdiArrowDown`,
+        'IMAGE:OPEN:open:mdiArrowDown',
         ...tags,
         ...(group.tags || []).map(label => `USER:${label}:NONE`)
       ].join(' '),
@@ -82,9 +82,9 @@ options.layer = (() => {
 
   const tags = ({ hidden, tags, links }) => [
     'SCOPE:LAYER:identify',
-    ...((links || []).length ? [`IMAGE:LINKS:links:mdiLink`] : []),
-    `IMAGE:OPEN:open:mdiArrowDown`,
-    hidden ? 'SYSTEM:HIDDEN:show' : `SYSTEM:VISIBLE:hide`,
+    ...((links || []).length ? ['IMAGE:LINKS:links:mdiLink'] : []),
+    'IMAGE:OPEN:open:mdiArrowDown',
+    hidden ? 'SYSTEM:HIDDEN:show' : 'SYSTEM:VISIBLE:hide',
     ...(tags || []).map(label => `USER:${label}:NONE`)
   ].join(' ')
 

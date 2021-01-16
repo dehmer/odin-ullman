@@ -1,33 +1,10 @@
+import level from 'level'
 // import { storage } from './memory'
 import { storage } from './local'
-import emitter from '../emitter'
 
-const tx = fn => {
-  const addition = []
-  const removal = []
-  const update = {}
+const master = level('master', { valueEncoding: 'json' })
+var store = level('4cd84a72-adfe-4156-9c49-23436661c441', { valueEncoding: 'json' })
 
-  const updateItem_ = fn => item => { storage.updateItem(fn)(item); update[item.id] = item }
-  const updateKey_ = fn => id => updateItem_(fn)(storage.getItem(id))
+console.log(master, store)
 
-  fn({
-    setItem: item => { storage.setItem(item); addition.push(item) },
-    getItem: storage.getItem,
-    removeItem: id => { storage.removeItem(id); removal.push(id) },
-    length: storage.length,
-    key: storage.key,
-    keys: storage.keys,
-    getItems: storage.getItems,
-    updateItem: updateItem_,
-    updateKey: updateKey_
-  })
-
-  return { addition, removal, update: Object.values(update) }
-}
-
-const txn = fn => event => {
-  const changes = tx(storage => fn(storage, event))
-  emitter.emit('storage/updated', changes)
-}
-
-export { storage, tx, txn }
+export { storage }

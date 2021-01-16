@@ -9,7 +9,7 @@ import selection from '../../selection'
 export default sources => {
 
   const featureById = id => sources.reduce((acc, source) => {
-    return acc ? acc : source.getFeatureById(id)
+    return acc || source.getFeatureById(id)
   }, null)
 
   // Note: DragBox is not a selection interaction per se.

@@ -2,7 +2,7 @@ import * as styles from 'ol/style'
 import * as SIDC from './sidc'
 import { primaryColor, accentColor } from './color-schemes'
 
-let labels = false
+const labels = false
 
 const style = options => new styles.Style(options)
 const stroke = options => new styles.Stroke(options)

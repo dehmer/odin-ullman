@@ -1,3 +1,4 @@
+/* eslint-disable import/no-duplicates */
 import * as R from 'ramda'
 import Collection from 'ol/Collection'
 import Feature from 'ol/Feature'
@@ -63,7 +64,7 @@ emitter.on(`:id(${LAYER_ID})/panto`, ({ id }) => {
   emitter.emit('map/panto', { center })
 })
 
-emitter.on(`:id(.*)/identify/down`, ({ id }) => {
+emitter.on(':id(.*)/identify/down', ({ id }) => {
 
   R.uniq([id, ...selection.selected()])
     .map(geometry)
@@ -71,7 +72,7 @@ emitter.on(`:id(.*)/identify/down`, ({ id }) => {
     .forEach(geometry => highlightedFeatures.push(new Feature({ geometry })))
 })
 
-emitter.on(`:dontcare(.*)/identify/up`, () => {
+emitter.on(':dontcare(.*)/identify/up', () => {
   highlightedFeatures.clear()
 })
 

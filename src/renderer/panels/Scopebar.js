@@ -7,7 +7,7 @@ const action = 'search/scope'
 
 const formatTags = scope => {
   const upper = (scope || '').toUpperCase()
-  const xs = scopes.map(s => `${s === upper ? 'SCOPE' : 'SYSTEM'}:${s}:${action}` )
+  const xs = scopes.map(s => `${s === upper ? 'SCOPE' : 'SYSTEM'}:${s}:${action}`)
   if (scopes.includes(upper)) return xs
   else return [...xs, `SCOPE:${upper.replace(/ /g, '\u00A0')}:${action}`]
 }

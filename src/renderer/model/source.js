@@ -1,11 +1,12 @@
+/* eslint-disable import/no-duplicates */
 import Collection from 'ol/Collection'
 import Feature from 'ol/Feature'
 import VectorSource from 'ol/source/Vector'
 import uuid from 'uuid-random'
-import { storage, txn } from '../storage'
+import { storage } from '../storage'
 import { featureId } from '../storage/ids'
-import emitter from '../emitter'
 import { isFeature } from '../storage/ids'
+import emitter from '../emitter'
 import selection from '../selection'
 import { readFeature, writeFeaturesObject } from '../storage/format'
 import { currentDateTime } from './datetime'
@@ -67,7 +68,30 @@ emitter.on('storage/updated', changes => {
 /**
  *
  */
-emitter.on('storage/snapshot', txn(storage => {
+emitter.on('storage/batch', ({ ops }) => {
+  const removals = ops.filter(op => op.type === 'del').map(op => op.key)
+  const additions = ops.filter(op => op.type === 'put').map(op => op.value)
+  selection.deselect(removals)
+  removals.forEach(removeFeature)
+  additions.forEach(removeFeature)
+  additions.forEach(addFeature) // TODO: bulk - addFeatures()
+})
+
+
+/**
+ *
+ */
+emitter.on('storage/put', ({ key, value }) => {
+  if (!isFeature(key)) return
+  removeFeature(value)
+  addFeature(value)
+})
+
+
+/**
+ *
+ */
+emitter.on('storage/snapshot', () => {
   const layer = writeFeaturesObject(source.getFeatures())
   layer.id = `layer:${uuid()}`
   layer.name = `Snapshot - ${currentDateTime()}`
@@ -76,15 +100,16 @@ emitter.on('storage/snapshot', txn(storage => {
   const featureCollection = layer.features
   delete layer.features
 
-  featureCollection.forEach(feature => {
+  const ops = featureCollection.map(feature => {
     feature.id = featureId(layer.id)
     feature.hidden = true
-    storage.setItem(feature)
+    return { type: 'put', key: feature.id, value: feature }
   })
 
+  ops.push({ type: 'put', key: layer.id, value: layer })
   emitter.emit('search/scope/layer')
-  storage.setItem(layer)
+  storage.batch(ops)
   selection.set([layer.id])
-}))
+})
 
 // <- OpenLayers interface (ol/source/Vector)

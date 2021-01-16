@@ -12,7 +12,7 @@ export const selectedSource = new VectorSource()
 
 const sources = [deselectedSource, selectedSource]
 const featureById = id => sources.reduce((acc, source) => {
-  return acc ? acc : source.getFeatureById(id)
+  return acc || source.getFeatureById(id)
 }, null)
 
 const addFeature = feature => selection.isSelected(feature.getId())

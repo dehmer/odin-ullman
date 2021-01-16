@@ -5,7 +5,7 @@ import { OSM } from 'ol/source'
 import { Tile as TileLayer, Vector as VectorLayer } from 'ol/layer'
 import VectorSource from 'ol/source/Vector'
 import { Rotate } from 'ol/control'
-import { Fill, Stroke, Circle, Style } from 'ol/style';
+import { Fill, Stroke, Circle, Style } from 'ol/style'
 import { defaults as defaultInteractions } from 'ol/interaction'
 import { highlightedFeatures } from '../storage/action'
 import './epsg'

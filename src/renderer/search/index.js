@@ -34,7 +34,7 @@ const lunrProvider = scope => {
 
   const translate = value => {
     if (value.startsWith(':')) return value.substring(1)
-    else return (value || '')
+    return (value || '')
       .split(' ')
       .filter(R.identity)
       .map(term)
@@ -43,7 +43,7 @@ const lunrProvider = scope => {
 
   const search = terms => {
     emitter.emit('search/current', { terms })
-    return R.compose(limit, sort, refs, searchIndex)(terms || '+tags:pin')
+    return R.compose(limit, sort, refs, searchIndex)(terms || '+tags:pin')
   }
 
   return (query, callback) => {
@@ -72,8 +72,8 @@ emitter.on('index/updated', () => search(currentQuery))
 
 emitter.on('search/scope/:scope', ({ scope }) => {
   switch (scope) {
-    case 'all': provider = lunrProvider(''); break;
-    default: provider = lunrProvider(scope); break;
+    case 'all': provider = lunrProvider(''); break
+    default: provider = lunrProvider(scope); break
   }
 
   emitter.emit('search/provider/updated', { scope })

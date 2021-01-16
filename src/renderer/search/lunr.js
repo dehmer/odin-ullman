@@ -37,6 +37,8 @@ var index
 
   reindex()
   emitter.on('storage/updated', reindex)
+  emitter.on('storage/batch', reindex)
+  emitter.on('storage/put', reindex)
 })()
 
 export const searchIndex = R.tryCatch(
