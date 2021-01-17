@@ -14,7 +14,12 @@ const getItem = id => JSON.parse(store.getItem(id))
 const removeItem = id => store.removeItem(id)
 const length = () => store.length
 const key = n => store.key(n)
-const keys = () => R.range(0, store.length).map(key)
+const keys = (prefix = '') => {
+  const keys = R.range(0, store.length).map(key)
+  return prefix
+    ? keys.filter(key => key.startsWith(prefix))
+    : keys
+}
 
 const batch = ops => {
   ops.forEach(op => {

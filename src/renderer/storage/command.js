@@ -1,4 +1,3 @@
-/* eslint-disable import/no-duplicates */
 import * as R from 'ramda'
 import uuid from 'uuid-random'
 import * as geom from 'ol/geom'
@@ -6,12 +5,14 @@ import DateTime from 'luxon/src/datetime'
 import { storage } from '.'
 import { layerId, featureId } from './ids'
 import { isLayer, isFeature, isGroup, isSymbol, isPlace, isLink } from './ids'
-import { FEATURE_ID, LAYER_ID, PLACE_ID, GROUP_ID, SYMBOL_ID, LINK_ID } from './ids'
+import { FEATURE_ID, LAYER_ID, PLACE_ID, GROUP_ID } from './ids'
 import emitter from '../emitter'
 import { searchIndex } from '../search/lunr'
 import { writeGeometryObject, writeFeatureObject } from './format'
 import selection from '../selection'
 import { currentDateTime, toMilitaryTime } from '../model/datetime'
+import './command-tag'
+
 
 // -> command handlers
 
@@ -19,8 +20,8 @@ emitter.on('layers/import', ({ layers }) => {
 
   // Overwrite existing layers, i.e. delete before re-adding.
   const names = layers.map(R.prop('name'))
-  const [layerIds, otherIds] = R.partition(isLayer, storage.keys())
-  const featureIds = otherIds.filter(isFeature)
+  const layerIds = storage.keys('layer:')
+  const featureIds = storage.keys('feature:')
 
   const removals = layerIds
     .map(storage.getItem)
@@ -52,30 +53,27 @@ emitter.on('layers/import', ({ layers }) => {
   storage.batch(ops)
 })
 
-const contained = R.cond([
-  [R.is(Array), ids => ids.reduce((acc, id) => acc.concat([id, ...contained(id)]), [])],
-  [isLayer, pid => storage.keys().filter(cid => layerId(cid) === pid)],
-  [isGroup, gid => {
-    const ids = searchIndex(storage.getItem(gid).terms)
-      .filter(({ ref }) => !isGroup(ref) && !isSymbol(ref))
-      .map(({ ref }) => ref)
-    return contained(ids)
-  }],
-  [R.T, id => [id]]
-])
+const contained = (() => {
+  const groupIds = id => searchIndex(storage.getItem(id).terms)
+    .filter(({ ref }) => !isGroup(ref) && !isSymbol(ref))
+    .map(({ ref }) => ref)
 
-const OPS = {
-  show: item => delete item.hidden,
-  hide: item => (item.hidden = true),
-  addtag: tag => item => (item.tags = R.uniq([...(item.tags || []), tag.toLowerCase()])),
-  removetag: tag => item => (item.tags = (item.tags || []).filter(x => x.toLowerCase() !== tag.toLowerCase()))
-}
+  const array = ids => ids.reduce((acc, id) => acc.concat([id, ...contained(id)]), [])
+  const layer = id => storage.keys().filter(cid => layerId(cid) === id)
+  const group = id => contained(groupIds(id))
+
+  return R.cond([
+    [R.is(Array), array],
+    [isLayer, layer],
+    [isGroup, group]
+  ])
+})()
 
 emitter.on(':id(.*)/show', ({ id }) => {
   const ids = R.uniq([id, ...selection.selected()])
   const ops = ids.flatMap(id => contained(id))
     .map(storage.getItem)
-    .map(R.tap(OPS.show))
+    .map(R.tap(item => delete item.hidden))
     .reduce((acc, item) => acc.concat({ type: 'put', key: item.id, value: item }), [])
 
   storage.batch(ops)
@@ -85,70 +83,12 @@ emitter.on(':id(.*)/hide', ({ id }) => {
   const ops = R.uniq([id, ...selection.selected()])
     .flatMap(id => contained(id))
     .map(storage.getItem)
-    .map(R.tap(OPS.hide))
+    .map(R.tap(item => (item.hidden = true)))
     .reduce((acc, item) => acc.concat({ type: 'put', key: item.id, value: item }), [])
 
   storage.batch(ops)
 })
 
-const taggable = id => !isGroup(id)
-
-const addtag = ({ id, tag }) => {
-  const ops = R.uniq([id, ...selection.selected(taggable)])
-    .map(storage.getItem)
-    .map(R.tap(OPS.addtag(tag)))
-    .reduce((acc, item) => acc.concat({ type: 'put', key: item.id, value: item }), [])
-
-  storage.batch(ops)
-}
-
-emitter.on(`:id(${FEATURE_ID})/tag/add`, addtag)
-emitter.on(`:id(${SYMBOL_ID})/tag/add`, addtag)
-emitter.on(`:id(${GROUP_ID})/tag/add`, addtag)
-emitter.on(`:id(${LINK_ID})/tag/add`, addtag)
-
-emitter.on(`:id(${LAYER_ID})/tag/add`, ({ id, tag }) => {
-  if (tag.toLowerCase() !== 'default') return addtag({ id, tag })
-  else {
-    const previous = storage.keys()
-      .filter(isLayer)
-      .map(storage.getItem)
-      .filter(layer => (layer.tags || []).includes('default'))
-
-    const ops = previous.map(layer => {
-      OPS.removetag('default')(layer)
-      return { type: 'put', key: layer.id, value: layer }
-    })
-
-    const layer = storage.getItem(id)
-    OPS.addtag('default')(layer)
-    ops.push({ type: 'put', key: id, value: layer })
-    storage.batch(ops)
-  }
-})
-
-emitter.on(`:id(${PLACE_ID})/tag/add`, async ({ id, tag }) => {
-  const place = await storage.getItem(id)
-  place.tags = R.uniq([...(place.tags || []), tag.toLowerCase()])
-  place.sticky = true
-  storage.setItem(place)
-})
-
-const removetag = ({ id, tag }) => {
-  const ops = R.uniq([id, ...selection.selected(taggable)])
-    .map(storage.getItem)
-    .map(R.tap(OPS.removetag(tag)))
-    .reduce((acc, item) => acc.concat({ type: 'put', key: item.id, value: item }), [])
-
-  storage.batch(ops)
-}
-
-emitter.on(`:id(${LAYER_ID})/tag/remove`, removetag)
-emitter.on(`:id(${FEATURE_ID})/tag/remove`, removetag)
-emitter.on(`:id(${SYMBOL_ID})/tag/remove`, removetag)
-emitter.on(`:id(${GROUP_ID})/tag/remove`, removetag)
-emitter.on(`:id(${LINK_ID})/tag/remove`, removetag)
-emitter.on(`:id(${PLACE_ID})/tag/remove`, removetag)
 
 const rename = async ({ id, name }) => {
   const item = await storage.getItem(id)
@@ -381,8 +321,7 @@ emitter.on(`:id(${LAYER_ID})/links/add`, ({ id, files }) => {
 emitter.on('storage/features/add', ({ feature }) => {
   const ops = []
 
-  const findLayer = () => storage.keys()
-    .filter(isLayer)
+  const findLayer = () => storage.keys('layer:')
     .map(storage.getItem)
     .find(layer => (layer.tags || []).includes('default'))
 
