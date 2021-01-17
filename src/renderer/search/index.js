@@ -20,7 +20,7 @@ const sort = entries => entries.sort((a, b) => {
   else return compare(field)(a, b)
 })
 
-const option = ref => options[ref.split(':')[0]](ref)
+const option = async ref => options[ref.split(':')[0]](ref)
 const refs = R.map(({ ref }) => option(ref))
 
 const lunrProvider = scope => {
@@ -41,16 +41,17 @@ const lunrProvider = scope => {
       .join(' ')
   }
 
-  const search = terms => {
+  const search = async terms => {
     emitter.emit('search/current', { terms })
-    return R.compose(limit, sort, refs, searchIndex)(terms || '+tags:pin')
+    const items = await Promise.all(R.compose(refs, searchIndex)(terms || '+tags:pin'))
+    return R.compose(limit, sort)(items)
   }
 
-  return (query, callback) => {
+  return async (query, callback) => {
     const filter = translate(query.value)
     scope
-      ? callback(search(`+scope:${scope} ${filter}`))
-      : callback(search(filter))
+      ? callback(await search(`+scope:${scope} ${filter}`))
+      : callback(await search(filter))
   }
 }
 
@@ -58,6 +59,7 @@ var currentQuery = { value: '' }
 var provider = lunrProvider('')
 
 const search = query => {
+  console.log('search', query)
   currentQuery = query
   provider(query, result => emitter.emit('search/result/updated', { result }))
 }

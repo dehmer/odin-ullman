@@ -1,13 +1,14 @@
 import * as R from 'ramda'
 import emitter from '../emitter'
+import * as level from './level'
 
 const clear = false
 const store = window.localStorage
 if (clear) window.localStorage.clear()
 
 const setItem = (item, quiet) => {
+  level.setItem(item, quiet)
   store.setItem(item.id, JSON.stringify(item))
-  if (!quiet) emitter.emit('storage/put', { key: item.id, value: item })
 }
 
 const getItem = id => JSON.parse(store.getItem(id))
@@ -22,6 +23,7 @@ const keys = (prefix = '') => {
 }
 
 const batch = ops => {
+  level.batch(ops)
   ops.forEach(op => {
     if (op.type === 'del') removeItem(op.key)
     else if (op.type === 'put') setItem(op.value, true)

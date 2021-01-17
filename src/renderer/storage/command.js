@@ -3,6 +3,7 @@ import uuid from 'uuid-random'
 import * as geom from 'ol/geom'
 import DateTime from 'luxon/src/datetime'
 import { storage } from '.'
+import * as level from './level'
 import { layerId, featureId } from './ids'
 import { isLayer, isFeature, isGroup, isSymbol, isPlace, isLink } from './ids'
 import { FEATURE_ID, LAYER_ID, PLACE_ID, GROUP_ID } from './ids'
@@ -13,28 +14,24 @@ import selection from '../selection'
 import { currentDateTime, toMilitaryTime } from '../model/datetime'
 import './command-tag'
 
-
 // -> command handlers
 
-emitter.on('layers/import', ({ layers }) => {
+emitter.on('layers/import', async ({ layers }) => {
 
   // Overwrite existing layers, i.e. delete before re-adding.
   const names = layers.map(R.prop('name'))
-  const layerIds = storage.keys('layer:')
-  const featureIds = storage.keys('feature:')
+  const loaded = await level.getItems('layer:')
+  const removals = loaded.filter(layer => names.includes(layer.name))
 
-  const removals = layerIds
-    .map(storage.getItem)
-    .filter(layer => names.includes(layer.name))
-    .map(layer => layer.id)
-
-  featureIds.reduce((acc, featureId) => {
-    if (acc.includes(layerId(featureId))) acc.push(featureId)
+  const ops = await removals.reduce(async (accp, layer) => {
+    const acc = await accp
+    acc.push({ type: 'del', key: layer.id })
+    const featureIds = await level.keys(`feature:${layer.id.split(':')[1]}`)
+    acc.push(...featureIds.map(key => ({ type: 'del', key })))
     return acc
-  }, removals)
+  }, [])
 
-  const ops = removals.map(id => ({ type: 'del', key: id }))
-
+  // Put new layers/features:
   layers.reduce((acc, layer) => {
     layer.id = layerId()
     const features = layer.features
@@ -42,11 +39,11 @@ emitter.on('layers/import', ({ layers }) => {
     delete layer.type
     acc.push({ type: 'put', key: layer.id, value: layer })
 
-    features.forEach(feature => {
-      feature.id = featureId(layer.id)
-      acc.push({ type: 'put', key: feature.id, value: feature })
-    })
+    const ops = features
+      .map(R.tap(feature => feature.id = featureId(layer.id)))
+      .map(value => ({ type: 'put', key: value.id, value }))
 
+    acc.push(...ops)
     return acc
   }, ops)
 
@@ -92,9 +89,9 @@ emitter.on(':id(.*)/hide', ({ id }) => {
 
 
 const rename = async ({ id, name }) => {
-  const item = await storage.getItem(id)
+  const item = await level.getItem(id)
   item.name = name.trim()
-  storage.setItem(item)
+  level.setItem(item)
 }
 
 emitter.on(`:id(${LAYER_ID})/rename`, rename)
@@ -105,9 +102,9 @@ emitter.on(`:id(${GROUP_ID})/rename`, rename)
  *
  */
 emitter.on(`:id(${FEATURE_ID})/rename`, async ({ id, name }) => {
-  const feature = await storage.getItem(id)
+  const feature = await level.getItem(id)
   feature.properties.t = name.trim()
-  storage.setItem(feature)
+  level.setItem(feature)
 })
 
 
@@ -115,10 +112,10 @@ emitter.on(`:id(${FEATURE_ID})/rename`, async ({ id, name }) => {
  *
  */
 emitter.on(`:id(${PLACE_ID})/rename`, async ({ id, name }) => {
-  const place = await storage.getItem(id)
+  const place = await level.getItem(id)
   place.name = name.trim()
   place.sticky = true
-  storage.setItem(place)
+  level.setItem(place)
 })
 
 

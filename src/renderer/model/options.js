@@ -1,16 +1,18 @@
 import * as R from 'ramda'
 import { storage } from '../storage'
+import * as level from '../storage/level'
 import { hierarchy, url, dimensions, scopes } from './symbols'
 import { searchIndex } from '../search/lunr'
 import { layerId } from '../storage/ids'
 import { identity } from './sidc'
+
 
 export const options = {}
 
 // -> Spotlight interface.
 
 /**
- * feature:/
+ * feature:
  */
 options.feature = (() => {
   const tags = ({ hidden, tags, links }, sidc) => [
@@ -23,8 +25,8 @@ options.feature = (() => {
     ...(tags || []).map(label => `USER:${label}:NONE`)
   ].join(' ')
 
-  const option = feature => {
-    const layer = storage.getItem(layerId(feature.id))
+  const option = async feature => {
+    const layer = await level.getItem(layerId(feature.id))
     const { properties } = feature
     const { sidc, t } = properties
     const description = layer.name.toUpperCase() + ' ⏤ ' + hierarchy(sidc).join(' • ')
@@ -40,20 +42,20 @@ options.feature = (() => {
     }
   }
 
-  return id => option(storage.getItem(id))
+  return async id => option(await level.getItem(id))
 })()
 
 
 /**
- * group:/
+ * group:
  */
 options.group = (() => {
-  const option = group => {
-
-    const items = searchIndex(group.terms)
+  const option = async group => {
+    const ps = searchIndex(group.terms)
       .filter(({ ref }) => !ref.startsWith('group:'))
       .map(({ ref }) => options[ref.split(':')[0]](ref))
 
+    const items = await Promise.all(ps)
     const tags = R.uniq(items.flatMap(item => item.tags.split(' ')))
       .filter(tag => tag.match(/SYSTEM:(HIDDEN|VISIBLE).*/))
 
@@ -71,12 +73,12 @@ options.group = (() => {
     }
   }
 
-  return id => option(storage.getItem(id))
+  return async id => option(await level.getItem(id))
 })()
 
 
 /**
- * layer:/
+ * layer:
  */
 options.layer = (() => {
 
@@ -96,12 +98,12 @@ options.layer = (() => {
     actions: 'PRIMARY:panto'
   })
 
-  return id => option(storage.getItem(id))
+  return async id => option(await level.getItem(id))
 })()
 
 
 /**
- * symbol:/
+ * symbol:
  */
 options.symbol = (() => {
   const replace = (s, i, r) => s.substring(0, i) + r + s.substring(i + r.length)
@@ -126,7 +128,7 @@ options.symbol = (() => {
     }
   }
 
-  return id => option(storage.getItem(id))
+  return async id => option(await storage.getItem(id))
 })()
 
 options.place = (() => {
@@ -149,9 +151,13 @@ options.place = (() => {
     }
   }
 
-  return id => option(storage.getItem(id))
+  return async id => option(await level.getItem(id))
 })()
 
+
+/**
+ * link:
+ */
 options.link = (() => {
 
   const path = type => {
@@ -178,5 +184,5 @@ options.link = (() => {
     }
   }
 
-  return id => option(storage.getItem(id))
+  return async id => option(await level.getItem(id))
 })()

@@ -17,6 +17,7 @@ var index
 
   const reindex = () => {
     console.time('[lunr] re-index')
+
     index = lunr(function () {
       this.pipeline.remove(lunr.stemmer)
       this.pipeline.remove(lunr.stopWordFilter) // allow words like 'so', 'own', etc.
