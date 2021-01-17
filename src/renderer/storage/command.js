@@ -65,7 +65,8 @@ const contained = (() => {
   return R.cond([
     [R.is(Array), array],
     [isLayer, layer],
-    [isGroup, group]
+    [isGroup, group],
+    [R.T, id => [id]]
   ])
 })()
 
