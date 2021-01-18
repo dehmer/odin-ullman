@@ -1,5 +1,5 @@
 {
-  "name": "electron-leveldb",
+  "name": "odin-ullman",
   "version": "0.0.0",
   "main": "dist/main.js",
   "scripts": {
