@@ -90,6 +90,17 @@ emitter.on(':id(.*)/hide', ({ id }) => {
   storage.batch(ops)
 })
 
+emitter.on(`:id(${LAYER_ID})/suspend`, ({ id }) => {
+  const socket = storage.getItem(id)
+  socket.active = false
+  storage.setItem(socket)
+})
+
+emitter.on(`:id(${LAYER_ID})/resume`, ({ id }) => {
+  const socket = storage.getItem(id)
+  socket.active = true
+  storage.setItem(socket)
+})
 
 const rename = async ({ id, name }) => {
   const item = await storage.getItem(id)
@@ -257,6 +268,20 @@ emitter.on('storage/layer', () => {
   selection.set([pid])
 })
 
+emitter.on('storage/socket', () => {
+  console.log('[storage/socket]')
+  const layer = {
+    id: layerId(),
+    name: `Socket Layer - ${currentDateTime()}`,
+    type: 'socket',
+    url: 'ws://localhost:3000',
+    active: true
+  }
+
+  storage.setItem(layer)
+  emitter.emit('search/scope/layer')
+  selection.set([layer.id])
+})
 
 /**
  *

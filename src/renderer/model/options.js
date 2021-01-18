@@ -27,7 +27,9 @@ options.feature = (() => {
     const layer = storage.getItem(layerId(feature.id))
     const { properties } = feature
     const { sidc, t } = properties
-    const description = layer.name.toUpperCase() + ' ⏤ ' + hierarchy(sidc).join(' • ')
+    const description = layer
+      ? layer.name.toUpperCase() + ' ⏤ ' + hierarchy(sidc).join(' • ')
+      : hierarchy(sidc).join(' • ')
 
     return {
       id: feature.id,
@@ -80,21 +82,39 @@ options.group = (() => {
  */
 options.layer = (() => {
 
-  const tags = ({ hidden, tags, links }) => [
-    'SCOPE:LAYER:identify',
-    ...((links || []).length ? ['IMAGE:LINKS:links:mdiLink'] : []),
-    'IMAGE:OPEN:open:mdiArrowDown',
-    hidden ? 'SYSTEM:HIDDEN:show' : 'SYSTEM:VISIBLE:hide',
-    ...(tags || []).map(label => `USER:${label}:NONE`)
-  ].join(' ')
+  const tags = feature => {
+    const { type, hidden, active, tags, links } = feature
 
-  const option = layer => ({
-    id: layer.id,
-    title: layer.name,
-    tags: tags(layer),
-    capabilities: 'RENAME|TAG|DROP',
-    actions: 'PRIMARY:panto'
-  })
+    const socket = type === 'socket'
+      ? active
+        ? [`SYSTEM:ACTIVE:suspend`]
+        : [`SYSTEM:INACTIVE:resume`]
+      : []
+
+    return [
+      'SCOPE:LAYER:identify',
+      ...((links || []).length ? ['IMAGE:LINKS:links:mdiLink'] : []),
+      'IMAGE:OPEN:open:mdiArrowDown',
+      hidden ? 'SYSTEM:HIDDEN:show' : 'SYSTEM:VISIBLE:hide',
+      ...[socket],
+      ...(tags || []).map(label => `USER:${label}:NONE`)
+    ].join(' ').replace('  ', ' ').trim()
+  }
+
+  const option = layer => {
+    const description = layer.type === 'socket'
+      ? layer.url
+      : null
+
+    return {
+      id: layer.id,
+      title: layer.name,
+      description,
+      tags: tags(layer),
+      capabilities: 'RENAME|TAG|DROP',
+      actions: 'PRIMARY:panto'
+    }
+  }
 
   return id => option(storage.getItem(id))
 })()

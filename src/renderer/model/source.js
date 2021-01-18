@@ -4,12 +4,12 @@ import Feature from 'ol/Feature'
 import VectorSource from 'ol/source/Vector'
 import uuid from 'uuid-random'
 import { storage } from '../storage'
-import { featureId } from '../storage/ids'
-import { isFeature } from '../storage/ids'
+import { featureId, isFeature } from '../storage/ids'
 import emitter from '../emitter'
 import selection from '../selection'
 import { readFeature, writeFeaturesObject } from '../storage/format'
 import { currentDateTime } from './datetime'
+import './socket'
 
 // -> OpenLayers interface (ol/source/Vector)
 
@@ -41,7 +41,8 @@ const isVisible = feature => feature && !feature.hidden
  * Initial population.
  */
 ;(() => {
-  const features = storage.keys()
+  const keys = storage.keys()
+  const features = keys
     .filter(isFeature)
     .map(storage.getItem)
     .filter(isVisible)
@@ -49,6 +50,7 @@ const isVisible = feature => feature && !feature.hidden
 
   addFeatures(features)
 })()
+
 
 
 /**
