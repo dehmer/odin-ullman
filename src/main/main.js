@@ -1,7 +1,7 @@
 /* eslint-disable dot-notation */
 import path from 'path'
 import url from 'url'
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow } from 'electron'
 
 
 app.allowRendererProcessReuse = true
@@ -28,11 +28,6 @@ const createWindow = async () => {
 
   await window.loadURL(windowUrl)
   window.show()
-
-  window.on('close', () => {
-    console.log('[main] application is going down.')
-    window.webContents.send('app-close')
-  })
 }
 
 app.whenReady().then(createWindow)

@@ -1,7 +1,6 @@
 import * as R from 'ramda'
 import { hierarchy, dimensions, scopes } from './symbols'
 import { layerId } from '../storage/ids'
-import { storage } from '../storage'
 import { identity } from './sidc'
 
 export const documents = {}
@@ -11,9 +10,8 @@ export const documents = {}
 /**
  *
  */
-documents.feature = id => {
-  const feature = storage.getItem(id)
-  const layer = storage.getItem(layerId(id))
+documents.feature = (feature, cache = []) => {
+  const layer = cache[layerId(feature.id)]
   const { t, sidc } = feature.properties
   const links = feature.links || []
 
@@ -27,19 +25,18 @@ documents.feature = id => {
   ]
 
   return {
-    id,
+    id: feature.id,
     scope: 'feature',
     tags: tags(feature),
     text: `${t} ${hierarchy(sidc).join(' ')} ${layer.name}`
   }
 }
 
+
 /**
  *
  */
-documents.group = id => {
-  const group = storage.getItem(id)
-
+documents.group = group => {
   return {
     id: group.id,
     text: group.name,
@@ -48,16 +45,16 @@ documents.group = id => {
   }
 }
 
+
 /**
  *
  */
-documents.layer = id => {
-  const layer = storage.getItem(id)
+documents.layer = layer => {
   const { name: text, hidden, tags } = layer
   const links = layer.links || []
 
   return {
-    id,
+    id: layer.id,
     scope: 'layer',
     text,
     tags: [
@@ -68,43 +65,43 @@ documents.layer = id => {
   }
 }
 
+
 /**
  *
  */
-documents.symbol = id => {
+documents.symbol = symbol => {
   const tags = ({ dimension, scope, tags }) => [
     ...dimension ? dimension.split(', ') : [],
     ...scope ? scope.split(', ') : [],
     ...(tags || [])
   ]
 
-  const symbol = storage.getItem(id)
-
   return ({
-    id,
+    id: symbol.id,
     scope: 'symbol',
     text: symbol.hierarchy.join(' '),
     tags: tags(symbol)
   })
 }
 
-documents.place = id => {
-  const entry = storage.getItem(id)
-  return {
-    id,
-    scope: 'place',
-    text: entry.display_name,
-    tags: [entry.class, entry.type, ...(entry.tags || [])].filter(R.identity)
-  }
-}
 
-documents.link = id => {
-  const entry = storage.getItem(id)
+/**
+ *
+ */
+documents.place = place => ({
+  id: place.id,
+  scope: 'place',
+  text: place.display_name,
+  tags: [place.class, place.type, ...(place.tags || [])].filter(R.identity)
+})
 
-  return {
-    id,
-    scope: 'link',
-    text: entry.name,
-    tags: entry.tags
-  }
-}
+
+/**
+ *
+ */
+documents.link = link => ({
+  id: link.id,
+  scope: 'link',
+  text: link.name,
+  tags: link.tags
+})

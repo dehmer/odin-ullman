@@ -1,13 +1,11 @@
-import level from 'level'
-import { ipcRenderer } from 'electron'
+import levelup from 'levelup'
+import leveldown from 'leveldown'
+import encoding from 'encoding-down'
 import emitter from '../emitter'
 
 // const master = level('master', { valueEncoding: 'json' })
-var project = level('4cd84a72-adfe-4156-9c49-23436661c441', { valueEncoding: 'json' })
-
-ipcRenderer.on('app-close', async () => {
-  await project.close()
-})
+const master = levelup(encoding(leveldown('./master'), { valueEncoding: 'json' }))
+var project = levelup(encoding(leveldown('./4cd84a72-adfe-4156-9c49-23436661c441'), { valueEncoding: 'json' }))
 
 export const setItem = async (item, quiet = false) => {
   await project.put(item.id, item)
@@ -18,7 +16,10 @@ export const getItem = key => project.get(key)
 
 export const getItems = prefix => new Promise((resolve, reject) => {
   const xs = []
-  const options = { keys: false, values: true, gte: prefix, lte: prefix + '\xff' }
+  const options = prefix
+    ? { keys: false, values: true, gte: prefix, lte: prefix + '\xff' }
+    : { keys: false, values: true }
+
   project.createReadStream(options)
     .on('data', data => xs.push(data))
     .on('error', reject)
@@ -55,3 +56,7 @@ export const map = fn => new Promise((resolve, reject) => {
 })
 
 export const batch = ops => project.batch(ops)
+
+// ;(async () => {
+//   await project.clear()
+// })()

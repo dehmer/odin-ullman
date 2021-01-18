@@ -14,7 +14,11 @@ export const options = {}
 /**
  * feature:
  */
-options.feature = (() => {
+options.feature = async feature => {
+  if (typeof feature === 'string') {
+    return options.feature(await level.getItem(feature))
+  }
+
   const tags = ({ hidden, tags, links }, sidc) => [
     'SCOPE:FEATURE:identify',
     ...((links || []).length ? ['IMAGE:LINKS:links:mdiLink'] : []),
@@ -25,62 +29,61 @@ options.feature = (() => {
     ...(tags || []).map(label => `USER:${label}:NONE`)
   ].join(' ')
 
-  const option = async feature => {
-    const layer = await level.getItem(layerId(feature.id))
-    const { properties } = feature
-    const { sidc, t } = properties
-    const description = layer.name.toUpperCase() + ' ⏤ ' + hierarchy(sidc).join(' • ')
+  const layer = await level.getItem(layerId(feature.id))
+  const { properties } = feature
+  const { sidc, t } = properties
+  const description = layer.name.toUpperCase() + ' ⏤ ' + hierarchy(sidc).join(' • ')
 
-    return {
-      id: feature.id,
-      title: t || 'N/A',
-      description,
-      url: url(sidc),
-      tags: tags(feature, sidc),
-      capabilities: 'RENAME|TAG|DROP',
-      actions: 'PRIMARY:panto'
-    }
+  return {
+    id: feature.id,
+    title: t || 'N/A',
+    description,
+    url: url(sidc),
+    tags: tags(feature, sidc),
+    capabilities: 'RENAME|TAG|DROP',
+    actions: 'PRIMARY:panto'
   }
-
-  return async id => option(await level.getItem(id))
-})()
+}
 
 
 /**
  * group:
  */
-options.group = (() => {
-  const option = async group => {
-    const ps = searchIndex(group.terms)
-      .filter(({ ref }) => !ref.startsWith('group:'))
-      .map(({ ref }) => options[ref.split(':')[0]](ref))
-
-    const items = await Promise.all(ps)
-    const tags = R.uniq(items.flatMap(item => item.tags.split(' ')))
-      .filter(tag => tag.match(/SYSTEM:(HIDDEN|VISIBLE).*/))
-
-    return {
-      id: group.id,
-      title: group.name,
-      tags: [
-        'GROUP:GROUP:identify',
-        ...(group.scope || []).map(label => `SCOPE:${label}:NONE`),
-        'IMAGE:OPEN:open:mdiArrowDown',
-        ...tags,
-        ...(group.tags || []).map(label => `USER:${label}:NONE`)
-      ].join(' '),
-      capabilities: 'RENAME|TAG'
-    }
+options.group = async group => {
+  if (typeof group === 'string') {
+    return options.group(await level.getItem(group))
   }
 
-  return async id => option(await level.getItem(id))
-})()
+  const ps = searchIndex(group.terms)
+    .filter(({ ref }) => !ref.startsWith('group:'))
+    .map(({ ref }) => options[ref.split(':')[0]](ref))
+
+  const items = await Promise.all(ps)
+  const tags = R.uniq(items.flatMap(item => item.tags.split(' ')))
+    .filter(tag => tag.match(/SYSTEM:(HIDDEN|VISIBLE).*/))
+
+  return {
+    id: group.id,
+    title: group.name,
+    tags: [
+      'GROUP:GROUP:identify',
+      ...(group.scope || []).map(label => `SCOPE:${label}:NONE`),
+      'IMAGE:OPEN:open:mdiArrowDown',
+      ...tags,
+      ...(group.tags || []).map(label => `USER:${label}:NONE`)
+    ].join(' '),
+    capabilities: 'RENAME|TAG'
+  }
+}
 
 
 /**
  * layer:
  */
-options.layer = (() => {
+options.layer = async layer => {
+  if (typeof layer === 'string') {
+    return options.layer(await level.getItem(layer))
+  }
 
   const tags = ({ hidden, tags, links }) => [
     'SCOPE:LAYER:identify',
@@ -90,22 +93,24 @@ options.layer = (() => {
     ...(tags || []).map(label => `USER:${label}:NONE`)
   ].join(' ')
 
-  const option = layer => ({
+  return {
     id: layer.id,
     title: layer.name,
     tags: tags(layer),
     capabilities: 'RENAME|TAG|DROP',
     actions: 'PRIMARY:panto'
-  })
-
-  return async id => option(await level.getItem(id))
-})()
+  }
+}
 
 
 /**
  * symbol:
  */
-options.symbol = (() => {
+options.symbol = async symbol => {
+  if (typeof symbol === 'string') {
+    return options.symbol(await level.getItem(symbol))
+  }
+
   const replace = (s, i, r) => s.substring(0, i) + r + s.substring(i + r.length)
 
   const tags = ({ sidc, tags }) => [
@@ -115,50 +120,49 @@ options.symbol = (() => {
     ...(tags || []).map(label => `USER:${label}:NONE`)
   ].join(' ')
 
-  const option = symbol => {
-    return {
-      id: symbol.id,
-      title: R.last(symbol.hierarchy),
-      description: R.dropLast(1, symbol.hierarchy).join(' • '),
-      url: url(replace(replace(symbol.sidc, 1, 'F'), 3, 'P')),
-      scope: 'SYMBOL',
-      tags: tags(symbol),
-      capabilities: 'TAG',
-      actions: 'PRIMARY:draw'
-    }
+  return {
+    id: symbol.id,
+    title: R.last(symbol.hierarchy),
+    description: R.dropLast(1, symbol.hierarchy).join(' • '),
+    url: url(replace(replace(symbol.sidc, 1, 'F'), 3, 'P')),
+    scope: 'SYMBOL',
+    tags: tags(symbol),
+    capabilities: 'TAG',
+    actions: 'PRIMARY:draw'
+  }
+}
+
+options.place = async place => {
+  if (typeof place === 'string') {
+    return options.place(await level.getItem(place))
   }
 
-  return async id => option(await storage.getItem(id))
-})()
-
-options.place = (() => {
   const tags = entry => [entry.class, entry.type]
     .filter(R.identity)
     .map(label => `SYSTEM:${label}:NONE`)
 
-  const option = entry => {
-    return {
-      id: entry.id,
-      title: entry.name,
-      description: entry.description,
-      tags: [
-        'SCOPE:PLACE:identify',
-        ...tags(entry),
-        ...(entry.tags || []).map(label => `USER:${label}:NONE`)
-      ].join(' '),
-      capabilities: 'TAG|RENAME',
-      actions: 'PRIMARY:panto'
-    }
+  return {
+    id: entry.id,
+    title: entry.name,
+    description: entry.description,
+    tags: [
+      'SCOPE:PLACE:identify',
+      ...tags(entry),
+      ...(entry.tags || []).map(label => `USER:${label}:NONE`)
+    ].join(' '),
+    capabilities: 'TAG|RENAME',
+    actions: 'PRIMARY:panto'
   }
-
-  return async id => option(await level.getItem(id))
-})()
+}
 
 
 /**
  * link:
  */
-options.link = (() => {
+options.link = async link => {
+  if (typeof link === 'string') {
+    return options.link(await level.getItem(link))
+  }
 
   const path = type => {
     switch (type) {
@@ -170,19 +174,15 @@ options.link = (() => {
     }
   }
 
-  const option = link => {
-    return {
-      id: link.id,
-      title: link.name + ' ⏤ ' + link.container,
-      description: link.lastModifiedDate,
-      path: path(link.type),
-      tags: [
-        'SCOPE:LINK:NONE',
-        ...(link.tags || []).map(label => `USER:${label}:NONE`)
-      ].join(' '),
-      capabilities: 'TAG'
-    }
+  return {
+    id: link.id,
+    title: link.name + ' ⏤ ' + link.container,
+    description: link.lastModifiedDate,
+    path: path(link.type),
+    tags: [
+      'SCOPE:LINK:NONE',
+      ...(link.tags || []).map(label => `USER:${label}:NONE`)
+    ].join(' '),
+    capabilities: 'TAG'
   }
-
-  return async id => option(await level.getItem(id))
-})()
+}

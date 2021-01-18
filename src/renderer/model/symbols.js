@@ -7,10 +7,12 @@ const id = descriptor => `symbol:${descriptor.sidc.substring(0, 10)}`
 
 // Populate storage with symbols if missing:
 if (!storage.keys().some(key => key.startsWith('symbol:'))) {
-  json.forEach(symbol => {
+  const ops = json.map(symbol => {
     symbol.id = id(symbol)
-    storage.setItem(symbol)
+    return { type: 'put', key: symbol.id, value: symbol }
   })
+
+  storage.batch(ops)
 }
 
 export const hierarchy = sidc => {

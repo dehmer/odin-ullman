@@ -1,7 +1,7 @@
 import * as R from 'ramda'
 import lunr from 'lunr'
 import emitter from '../emitter'
-import { storage } from '../storage'
+import * as level from '../storage/level'
 import { documents } from '../model/documents'
 
 /**
@@ -15,8 +15,18 @@ var index
   const nullScope = () => null
   const scope = key => documents[key.split(':')[0]] || nullScope
 
-  const reindex = () => {
+  const reindex = async () => {
     console.time('[lunr] re-index')
+
+    const items = await level.getItems()
+    const cache = items.reduce((acc, item) => {
+      acc[item.id] = item
+      return acc
+    }, {})
+
+    const docs = items
+      .map(item => scope(item.id)(item, cache))
+      .filter(R.identity)
 
     index = lunr(function () {
       this.pipeline.remove(lunr.stemmer)
@@ -26,10 +36,7 @@ var index
       this.field('scope')
       this.field('tags')
 
-      storage.keys()
-        .map(key => scope(key)(key))
-        .filter(R.identity)
-        .forEach(document => this.add(document))
+      docs.forEach(doc => this.add(doc))
     })
 
     console.timeEnd('[lunr] re-index')

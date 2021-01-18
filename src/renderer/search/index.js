@@ -59,7 +59,6 @@ var currentQuery = { value: '' }
 var provider = lunrProvider('')
 
 const search = query => {
-  console.log('search', query)
   currentQuery = query
   provider(query, result => emitter.emit('search/result/updated', { result }))
 }
