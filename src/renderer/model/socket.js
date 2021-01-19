@@ -2,7 +2,7 @@ import { storage } from '../storage'
 import { isFeature, isLayer, layerId } from '../storage/ids'
 import { source } from './source'
 import emitter from '../emitter'
-import { readFeature } from '../storage/format'
+import { readFeature, readFeatures, writeFeatureObject } from '../storage/format'
 
 const featureById = id => source.getFeatureById(id)
 
@@ -20,11 +20,17 @@ const socket = (id, url) => {
 
     socket.onmessage = ({ data }) => {
       const item = JSON.parse(data)
-      storage.setItem(item, true)
-      const feature = readFeature(item)
-      const stale = featureById(feature.getId())
-      if (stale) source.removeFeature(stale)
-      if (!hidden[feature.getId()]) source.addFeature(feature)
+
+      const features = item.type === 'Feature'
+        ? [readFeature(item)]
+        : readFeatures(item)
+
+      features.forEach(feature => {
+        storage.setItem(writeFeatureObject(feature), true)
+        const stale = featureById(feature.getId())
+        if (stale) source.removeFeature(stale)
+        if (!hidden[feature.getId()]) source.addFeature(feature)
+      })
     }
   } catch (err) {
     emitter.emit(`${id}/socket/error`, { err })
