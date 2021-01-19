@@ -11,8 +11,8 @@ function heartbeat() { this.alive = true }
 
 const wss = new WebSocket.Server({ noServer: true })
 
-const randomPosition = (lng, lat) => {
-  var point = new LatLon(lng, lat)
+const randomPosition = (lat, lng) => {
+  var point = new LatLon(lat, lng)
   var heading = Math.random() * 360
   var distance = 200
 
@@ -30,6 +30,7 @@ const randomPosition = (lng, lat) => {
 }
 
 // constant between server restarts:
+const beamUUID = 'dbe9a008-d5e6-4a31-91a9-d8909dc3fd5d'
 const jammerUUID = '276f23c6-700f-4676-9959-928286eeea97'
 const uaUUIDs = [
   'b67ad373-5783-45ef-9ea3-638c22285f83',
@@ -126,9 +127,54 @@ const collectionHandler = function () {
   })
 }
 
+const signalBeam = function () {
+  var layerId
+  var active = true
+
+  const loop = bearing => {
+    const tallinn = [24.753574, 59.436962] // [Longitude, Latitude]
+    const distance = 300 * 1000 // [m]
+    setTimeout(() => {
+      const point = new LatLon(tallinn[1], tallinn[0]).destinationPoint(distance, bearing)
+      const feature = {
+        type: 'Feature',
+        id: `feature:${layerId.split(':')[1]}/${beamUUID}`,
+        geometry: { type: "LineString", coordinates: [
+          tallinn,
+          [point.lng, point.lat]
+        ]},
+        properties: {
+          t: "Tallinn Lighthouse",
+          color: 'green'
+        }
+      }
+
+      this.send(JSON.stringify(feature))
+      active && loop((bearing + 1) % 360)
+    }, 50)
+  }
+
+  this.on('message', data => {
+    const message = JSON.parse(data)
+    switch (message.type) {
+      case 'resume': {
+        layerId = message.id
+        active = true
+        loop(0)
+        break
+      }
+      case 'suspend': {
+        active = false
+        break
+      }
+    }
+  })
+}
+
 const handlers = [
   featureHandler,
-  collectionHandler
+  collectionHandler,
+  signalBeam
 ]
 
 
@@ -136,7 +182,8 @@ wss.on('connection', socket => {
   console.log('connection accepted.')
   socket.alive = true
   socket.on('pong', heartbeat)
-  socket.handler = handlers[Math.floor(Math.random() * 2)].bind(socket)
+  // socket.handler = handlers[Math.floor(Math.random() * handlers.length)].bind(socket)
+  socket.handler = handlers[2].bind(socket)
   socket.handler()
 })
 
