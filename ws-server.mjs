@@ -52,7 +52,7 @@ const handler = function () {
       case 'resume': {
         layerId = message.id
         active = true
-        loop(1, 50000, 0)
+        loop(1, 50000, Math.random() * 360)
         break
       }
       case 'suspend': {

@@ -9,8 +9,8 @@ const featureById = id => source.getFeatureById(id)
 const sockets = {}
 
 const socket = (id, url) => {
+  const hidden = {}
   var socket
-  var hidden = {}
 
   try {
     socket = new WebSocket(url)
@@ -32,9 +32,12 @@ const socket = (id, url) => {
 
   const handler = event => {
     event.ops.forEach(op => {
-      if (op.type !== 'put') return
-      if (isLayer(op.key) && op.key === id) hidden[op.key] = op.value.hidden
-      else if (isFeature(op.key) && layerId(op.key) === id) hidden[op.key] = op.value.hidden
+      if (op.type === 'put') {
+        if (isLayer(op.key) && op.key === id) hidden[op.key] = op.value.hidden
+        else if (isFeature(op.key) && layerId(op.key) === id) hidden[op.key] = op.value.hidden
+      } else if (op.type === 'del') {
+        if (isLayer(op.key) && op.key === id) socket.close()
+      }
     })
   }
 
