@@ -143,13 +143,24 @@ handlers['keydown/a'] = (state, { shiftKey, metaKey }) => R.tap(({ list }) => {
 /**
  *
  */
-handlers['keydown/Backspace'] = (state, { shiftKey, metaKey }) => R.tap(state => {
-  if (!metaKey || state.focus === -1) return
-  const include = (entry, index) => entry.selected || index === state.focus
-  const ids = state.list.filter(include).map(R.prop('id'))
-  emitter.emit('items/remove', { ids })
-}, state)
 
+const remove = state => {
+  const { focus, list} = state
+  if (focus === -1) return
+  const include = (entry, index) => entry.selected || index === focus
+  const ids = list.filter(include).map(R.prop('id'))
+  emitter.emit('items/remove', { ids })
+  return state
+}
+
+// All platforms:
+handlers['keydown/Delete'] = remove
+
+
+// Additionally, Mac only:
+if (navigator.platform && navigator.platform.toLowerCase().includes('mac')) {
+  handlers['keydown/Backspace'] = (state, { metaKey }) => metaKey ? remove(state) : state
+}
 
 /**
  * Space.
@@ -250,6 +261,7 @@ const Spotlight = () => {
 
   const handleKeyDown = event => {
     const { key, shiftKey, metaKey } = event
+    console.log(key)
     dispatch({ path: `keydown/${key}`, shiftKey, metaKey })
     if (key === 'Enter' && state.focus !== -1) ref.current.focus()
   }
