@@ -12,18 +12,19 @@ function heartbeat() { this.alive = true }
 const wss = new WebSocket.Server({ noServer: true })
 
 const randomPosition = (lng, lat) => {
-  const p1 = new LatLon(lng, lat)
-  var direction = 1
-  var distance = 50000
-  var bearing = Math.random() * 360
+  var point = new LatLon(lng, lat)
+  var heading = Math.random() * 360
+  var distance = 200
 
   return {
-    bearing: () => bearing * direction,
+    heading: () => heading,
     next: () => {
-      direction = Math.random() > 0.95 ? -direction : direction
-      distance = Math.random() > 0.5 ? distance + 1000 : distance - 1000
-      bearing = (bearing + Math.random() * 3 * direction) % 360
-      return p1.destinationPoint(distance, bearing)
+      heading = Math.random() > 0.6
+        ? heading + 5 - Math.random() * 10
+        : heading
+
+      point = point.destinationPoint(distance, heading)
+      return point
     }
   }
 }
@@ -35,6 +36,8 @@ const uaUUIDs = [
   '1c414201-4dd3-41de-8eb2-fb98b0ff12d1',
   '97f4f448-7d30-4dc8-b508-9ae983710bef'
 ]
+
+const loopDelay = 100 /* ms */
 
 const featureHandler = function () {
   var layerId
@@ -55,7 +58,7 @@ const featureHandler = function () {
 
       this.send(JSON.stringify(feature))
       active && loop(position)
-    }, 50)
+    }, loopDelay)
   }
 
   this.on('message', data => {
@@ -90,7 +93,7 @@ const collectionHandler = function () {
           properties: {
             sidc: 'SHAPMFQS--*****',
             t: `UA ${index + 1}`,
-            q: position.bearing(),
+            q: position.heading(),
             rotate: true
           }
         }
@@ -99,7 +102,7 @@ const collectionHandler = function () {
       const collection = { type: 'FeatureCollection', features }
       this.send(JSON.stringify(collection))
       active && loop(positions)
-    }, 50)
+    }, loopDelay)
   }
 
   this.on('message', data => {

@@ -385,4 +385,26 @@ emitter.on('features/geometry/update', ({ geometries }) => {
   storage.batch(ops)
 })
 
+/**
+ *
+ */
+emitter.on(`:id(${FEATURE_ID})/follow`, ({ id }) => {
+  const feature = storage.getItem(id)
+  if (feature.follow) {
+    delete feature.follow
+    const ops = [{ type: 'put', key: id, value: feature }]
+    storage.batch(ops)
+  } else {
+    feature.follow = true
+    const ops = storage.keys()
+      .filter(isFeature)
+      .map(storage.getItem)
+      .filter(feature => feature.follow)
+      .map(R.tap(feature => delete feature.follow))
+      .map(feature => ({ type: 'put', key: feature.id, value: feature }))
+    ops.push({ type: 'put', key: id, value: feature })
+    storage.batch(ops)
+  }
+})
+
 // <- command handlers

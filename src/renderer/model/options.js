@@ -13,10 +13,11 @@ export const options = {}
  * feature:/
  */
 options.feature = (() => {
-  const tags = ({ hidden, tags, links }, sidc) => [
+  const tags = ({ hidden, tags, links, follow }, sidc) => [
     'SCOPE:FEATURE:identify',
     ...((links || []).length ? ['IMAGE:LINKS:links:mdiLink'] : []),
     hidden ? 'SYSTEM:HIDDEN:show' : 'SYSTEM:VISIBLE:hide',
+    ...(follow ? ['SYSTEM:FOLLOW:NONE'] : []),
     ...dimensions(sidc).map(label => `SYSTEM:${label}:NONE`),
     ...scopes(sidc).map(label => `SYSTEM:${label}:NONE`),
     ...(identity(sidc)).map(label => `SYSTEM:${label}:NONE`),
@@ -37,7 +38,7 @@ options.feature = (() => {
       description,
       url: url(sidc),
       tags: tags(feature, sidc),
-      capabilities: 'RENAME|TAG|DROP',
+      capabilities: 'RENAME|TAG|DROP|FOLLOW',
       actions: 'PRIMARY:panto'
     }
   }

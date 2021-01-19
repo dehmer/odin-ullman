@@ -34,7 +34,7 @@ const icon = (properties, symbol, resolution) => {
   const imgSize = size => [Math.floor(size.width), Math.floor(size.height)]
 
   const { q, rotate } = properties
-  const rotation = rotate ? (q + 90 || 0) : 0
+  const rotation = rotate ? (q || 0) : 0
 
 
   return new Icon({
@@ -44,6 +44,7 @@ const icon = (properties, symbol, resolution) => {
     anchorYUnits: 'pixels',
     imgSize: imgSize(symbol.getSize()),
     img: symbol.asCanvas(),
+    rotateWithView: true,
     rotation: rotation / 180 * Math.PI
   })
 }

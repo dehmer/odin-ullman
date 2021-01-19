@@ -5,6 +5,19 @@ import emitter from '../emitter'
 import { readFeature, readFeatures, writeFeatureObject } from '../storage/format'
 
 const featureById = id => source.getFeatureById(id)
+const addItem = item => {
+  const feature = readFeature(item)
+  source.addFeature(feature)
+
+  const rotation = item.properties.rotate
+    ? 2 * Math.PI - (item.properties.q / 180 * Math.PI)
+    : 0
+
+  if(item.follow) {
+    const center = feature.getGeometry().getFirstCoordinate()
+    emitter.emit('map/panto', { center, rotation })
+  }
+}
 
 const sockets = {}
 
@@ -19,17 +32,18 @@ const socket = (id, url) => {
     socket.onclose = () => emitter.emit(`${id}/socket/close`)
 
     socket.onmessage = ({ data }) => {
-      const item = JSON.parse(data)
+      const json = JSON.parse(data)
 
-      const features = item.type === 'Feature'
-        ? [readFeature(item)]
-        : readFeatures(item)
+      const items = json.type === 'Feature'
+        ? [json]
+        : json.features
 
-      features.forEach(feature => {
-        storage.setItem(writeFeatureObject(feature), true)
-        const stale = featureById(feature.getId())
+      items.forEach(item => {
+        const mergedItem = { ...storage.getItem(item.id), ...item}
+        storage.setItem(mergedItem, true)
+        const stale = featureById(item.id)
         if (stale) source.removeFeature(stale)
-        if (!hidden[feature.getId()]) source.addFeature(feature)
+        if (!hidden[item.id]) addItem(mergedItem)
       })
     }
   } catch (err) {
