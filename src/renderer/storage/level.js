@@ -3,7 +3,6 @@ import levelup from 'levelup'
 import leveldown from 'leveldown'
 import encoding from 'encoding-down'
 import emitter from '../emitter'
-import { storage } from './local'
 
 // const master = level('master', { valueEncoding: 'json' })
 const master = levelup(encoding(leveldown('./master'), { valueEncoding: 'json' }))
@@ -17,11 +16,10 @@ export const projectStore = () => project
 
 export const setItem = async (item, quiet = false) => {
   await project.put(item.id, item)
-  storage.setItem(item, quiet)
   if (!quiet) emitter.emit('storage/put', { key: item.id, value: item })
 }
 
-export const getItem = key => project.get(key)
+export const getItem = key => project.get(key).catch(() => null)
 
 export const getItems = (prefix, p = (() => true)) => new Promise((resolve, reject) => {
   const xs = []
@@ -66,6 +64,13 @@ export const map = fn => new Promise((resolve, reject) => {
 
 export const batch = async ops => {
   await project.batch(ops)
-  storage.batch(ops)
   emitter.emit('storage/batch', { ops })
 }
+
+export const existsKey = prefix => new Promise((resolve, reject) => {
+  const options = { keys: true, values: false, gte: prefix, lte: prefix + '\xff' }
+  project.createReadStream(options)
+    .on('data', () => resolve(true))
+    .on('error', reject)
+    .once('end', () => resolve(false))
+})

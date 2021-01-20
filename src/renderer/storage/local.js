@@ -1,6 +1,4 @@
 import * as R from 'ramda'
-import emitter from '../emitter'
-import * as level from './level'
 
 const clear = false
 const store = window.localStorage
