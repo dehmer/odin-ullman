@@ -1,5 +1,4 @@
 import * as R from 'ramda'
-import { storage } from '../storage'
 import * as level from '../storage/level'
 import { hierarchy, url, dimensions, scopes } from './symbols'
 import { searchIndex } from '../search/lunr'
