@@ -137,18 +137,18 @@ options.place = async place => {
     return options.place(await level.getItem(place))
   }
 
-  const tags = entry => [entry.class, entry.type]
+  const tags = place => [place.class, place.type]
     .filter(R.identity)
     .map(label => `SYSTEM:${label}:NONE`)
 
   return {
-    id: entry.id,
-    title: entry.name,
-    description: entry.description,
+    id: place.id,
+    title: place.name,
+    description: place.description,
     tags: [
       'SCOPE:PLACE:identify',
-      ...tags(entry),
-      ...(entry.tags || []).map(label => `USER:${label}:NONE`)
+      ...tags(place),
+      ...(place.tags || []).map(label => `USER:${label}:NONE`)
     ].join(' '),
     capabilities: 'TAG|RENAME',
     actions: 'PRIMARY:panto'
