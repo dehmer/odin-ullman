@@ -2,7 +2,6 @@ import * as R from 'ramda'
 import uuid from 'uuid-random'
 import * as geom from 'ol/geom'
 import DateTime from 'luxon/src/datetime'
-import { storage } from '.'
 import * as level from './level'
 import { layerId, featureId } from './ids'
 import { isLayer, isFeature, isGroup, isSymbol, isPlace, isLink } from './ids'
@@ -50,37 +49,37 @@ emitter.on('layers/import', async ({ layers }) => {
   level.batch(ops)
 })
 
-const contained = (() => {
-  const groupIds = id => searchIndex(storage.getItem(id).terms)
-    .filter(({ ref }) => !isGroup(ref) && !isSymbol(ref))
-    .map(({ ref }) => ref)
+const contained = async (accp, id) => {
+  const acc = await accp
 
-  const array = ids => ids.reduce((acc, id) => acc.concat([id, ...contained(id)]), [])
-  const layer = id => storage.keys().filter(cid => layerId(cid) === id)
-  const group = id => contained(groupIds(id))
+  if (isFeature(id)) {
+    const item = await level.getItem(id)
+    return acc.concat(item)
+  } else if (isGroup(id)) {
+    const item = await level.getItem(id)
+    const ids = searchIndex(item.terms)
+      .filter(({ ref }) => !isGroup(ref) && !isSymbol(ref))
+      .map(({ ref }) => ref)
+    return ids.reduce(contained, acc)
+  } else if (isLayer(id)) {
+    acc.push(await level.getItem(id))
+    const ids = await level.keys(`feature:${id.split(':')[1]}`)
+    return ids.reduce(contained, acc)
+  } else return acc
+}
 
-  return R.cond([
-    [R.is(Array), array],
-    [isLayer, layer],
-    [isGroup, group],
-    [R.T, id => [id]]
-  ])
-})()
-
-emitter.on(':id(.*)/show', ({ id }) => {
+emitter.on(':id(.*)/show', async ({ id }) => {
   const ids = R.uniq([id, ...selection.selected()])
-  const ops = ids.flatMap(id => contained(id))
-    .map(storage.getItem)
+  const ops = (await ids.reduce(contained, []))
     .map(R.tap(item => delete item.hidden))
     .reduce((acc, item) => acc.concat({ type: 'put', key: item.id, value: item }), [])
 
   level.batch(ops)
 })
 
-emitter.on(':id(.*)/hide', ({ id }) => {
-  const ops = R.uniq([id, ...selection.selected()])
-    .flatMap(id => contained(id))
-    .map(storage.getItem)
+emitter.on(':id(.*)/hide', async ({ id }) => {
+  const ids = R.uniq([id, ...selection.selected()])
+  const ops = (await ids.reduce(contained, []))
     .map(R.tap(item => (item.hidden = true)))
     .reduce((acc, item) => acc.concat({ type: 'put', key: item.id, value: item }), [])
 
@@ -232,41 +231,8 @@ emitter.on('storage/bookmark', async () => {
 /**
  *
  */
-emitter.on('storage/layer', () => {
-  const features = pid => id => {
-    if (isPlace(id)) {
-      const place = storage.getItem(id)
-      return {
-        id: featureId(pid),
-        type: 'Feature',
-        geometry: place.geojson,
-        properties: { t: place.name },
-        tags: place.tags
-      }
-    } else return []
-  }
-
-  const item = storage.getItem('search:')
-  const ids = searchIndex(item.terms)
-    .filter(({ ref }) => !isGroup(ref) && !isSymbol(ref))
-    .map(({ ref }) => ref)
-
-  const pid = layerId()
-  const items = R.uniq(contained(ids)).flatMap(features(pid))
-  const tags = R.uniq(items.flatMap(R.prop('tags')))
-  storage.setItem({ id: pid, name: `Layer - ${currentDateTime()}`, tags })
-  items.forEach(storage.setItem)
-
-  emitter.emit('search/scope/layer')
-  selection.set([pid])
-})
-
-
-/**
- *
- */
 emitter.on('search/current', ({ terms }) => {
-  storage.setItem({ id: 'search:', terms }, true)
+  level.setItem({ id: 'search:', terms }, true)
 })
 
 
@@ -362,5 +328,50 @@ emitter.on('features/geometry/update', async ({ geometries }) => {
 
   level.batch(ops)
 })
+
+
+/**
+ * Create new layer from last search.
+ */
+emitter.on('storage/layer', async () => {
+  const pid = layerId()
+  const item = await level.getItem('search:')
+  const ids = searchIndex(item.terms)
+    .filter(({ ref }) => !isGroup(ref) && !isSymbol(ref))
+    .map(({ ref }) => ref)
+
+  const items = await ids.reduce(async function reducer (accp, id) {
+    const acc = await accp
+    if (isLayer(id)) {
+      const featureIds = await level.keys(`feature:${id.split(':')[1]}`)
+      return featureIds.reduce(reducer, acc)
+    } else if (isPlace(id)) {
+      const place = await level.getItem(id)
+      return acc.concat({
+        type: 'Feature',
+        geometry: place.geojson,
+        properties: { t: place.name },
+        id: featureId(pid),
+        tags: place.tags
+      })
+    } else if (isFeature(id)) {
+      const feature = { ...(await level.getItem(id)), id: featureId(pid) }
+      return acc.concat(feature)
+    }
+    else return acc
+  }, [])
+
+  const layer = {
+    id: pid,
+    name: `Layer - ${currentDateTime()}`,
+    tags: R.uniq(items.flatMap(R.prop('tags'))).filter(R.identity)
+  }
+
+  const ops = items.concat(layer).map(item => ({ type: 'put', key: item.id, value: item}))
+  level.batch(ops)
+  emitter.emit('search/scope/layer')
+  selection.set([pid])
+})
+
 
 // <- command handlers

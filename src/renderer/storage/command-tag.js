@@ -1,7 +1,6 @@
 import * as R from 'ramda'
 import emitter from '../emitter'
 import selection from '../selection'
-import { storage } from '.'
 import * as level from './level'
 import { isLayer, isPlace, isGroup } from './ids'
 
@@ -31,11 +30,11 @@ emitter.on(`:id(.*)/tag/add`, async ({ id, tag }) => {
     .reduce((acc, item) => acc.concat({ type: 'put', key: item.id, value: item }), [])
 
   // Special handling: layer/default.
-  if (tag.toLowerCase() === 'default' && isLayer(id)) storage.keys('layer:')
-    .map(storage.getItem)
-    .filter(layer => (layer.tags || []).includes('default'))
-    .map(R.tap(removetag_('default')))
-    .forEach(layer => ops.push({ type: 'put', key: layer.id, value: layer }))
+  if (tag.toLowerCase() === 'default' && isLayer(id)) {
+    (await level.getItems('layer:', layer => (layer.tags || []).includes('default')))
+      .map(R.tap(removetag_('default')))
+      .forEach(layer => ops.push({ type: 'put', key: layer.id, value: layer }))
+  }
 
   level.batch(ops)
 })

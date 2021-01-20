@@ -10,7 +10,7 @@ import { defaults as defaultInteractions } from 'ol/interaction'
 import { highlightedFeatures } from '../storage/action'
 import './epsg'
 import style from './style'
-import { storage } from '../storage'
+import * as level from '../storage/level'
 import select from './interaction/select'
 import boxselect from './interaction/boxselect'
 import translate from './interaction/translate'
@@ -24,11 +24,11 @@ import emitter from '../emitter'
  *
  */
 export const Map = () => {
-  React.useEffect(() => {
+  React.useEffect(async () => {
     const target = 'map'
     const controls = [new Rotate()]
 
-    const viewOptions = storage.getItem('session:map.view') || {
+    const viewOptions = await level.getItem('session:map.view') || {
       center: [2650758.3877764223, 8019983.4523651665],
       resolution: 612,
       rotation: 0
@@ -86,7 +86,7 @@ export const Map = () => {
 
     view.on('change', ({ target: view }) => {
       // TODO: throttle
-      storage.setItem({
+      level.setItem({
         id: 'session:map.view',
         center: view.getCenter(),
         resolution: view.getResolution(),

@@ -7,7 +7,6 @@ const store = window.localStorage
 if (clear) window.localStorage.clear()
 
 const setItem = (item, quiet) => {
-  level.setItem(item, quiet)
   store.setItem(item.id, JSON.stringify(item))
 }
 

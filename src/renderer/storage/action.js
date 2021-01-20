@@ -2,7 +2,6 @@ import * as R from 'ramda'
 import Collection from 'ol/Collection'
 import Feature from 'ol/Feature'
 import { getCenter } from 'ol/extent'
-import { storage } from '.'
 import * as level from './level'
 import emitter from '../emitter'
 import { isGroup, isSymbol } from './ids'
@@ -50,8 +49,8 @@ emitter.on(`:id(${GROUP_ID})/open`, async ({ id }) => {
   })
 })
 
-emitter.on(`:id(${PLACE_ID})/panto`, ({ id }) => {
-  const item = storage.getItem(id)
+emitter.on(`:id(${PLACE_ID})/panto`, async ({ id }) => {
+  const item = await level.getItem(id)
   const geometry = readGeometry(item.geojson)
   const extent = geometry.getExtent()
   const center = getCenter(extent)
@@ -65,14 +64,16 @@ emitter.on(`:id(${FEATURE_ID})/panto`, async ({ id }) => {
   emitter.emit('map/panto', { center })
 })
 
-emitter.on(`:id(${LAYER_ID})/panto`, ({ id }) => {
-  const center = getCenter(geometry(id).getExtent())
+emitter.on(`:id(${LAYER_ID})/panto`, async ({ id }) => {
+  const extent = (await geometry(id)).getExtent()
+  const center = getCenter(extent)
   emitter.emit('map/panto', { center })
 })
 
-emitter.on(':id(.*)/identify/down', ({ id }) => {
-  R.uniq([id, ...selection.selected()])
-    .map(geometry)
+emitter.on(':id(.*)/identify/down', async ({ id }) => {
+  const ids = R.uniq([id, ...selection.selected()])
+  const geometries = await Promise.all(ids.map(geometry))
+  geometries
     .filter(R.identity)
     .forEach(geometry => highlightedFeatures.push(new Feature({ geometry })))
 })
@@ -109,8 +110,8 @@ emitter.on(`:id(${LAYER_ID})/links`, async ({ id }) => {
   })
 })
 
-emitter.on(`:id(${SYMBOL_ID})/draw`, ({ id }) => {
-  const descriptor = storage.getItem(id)
+emitter.on(`:id(${SYMBOL_ID})/draw`, async ({ id }) => {
+  const descriptor = await level.getItem(id)
   const sidc = descriptor.sidc
   descriptor.sidc = `${sidc[0]}F${sidc[2]}P${sidc.substring(4)}`
   if (descriptor) emitter.emit('map/draw', { descriptor })

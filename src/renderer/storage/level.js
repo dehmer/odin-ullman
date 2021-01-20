@@ -13,8 +13,11 @@ var project = levelup(encoding(leveldown('./4cd84a72-adfe-4156-9c49-23436661c441
 //   await project.clear()
 // })()
 
+export const projectStore = () => project
+
 export const setItem = async (item, quiet = false) => {
   await project.put(item.id, item)
+  storage.setItem(item, quiet)
   if (!quiet) emitter.emit('storage/put', { key: item.id, value: item })
 }
 
