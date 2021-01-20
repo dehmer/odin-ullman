@@ -29,6 +29,12 @@ const Tag = props => {
     emitter.emit(path)
   }
 
+  const handleDoubleClick = event => {
+    const capabilities = props.capabilities || ''
+    if (!capabilities.includes('FOLLOW')) return
+    emitter.emit(`${props.id}/follow`)
+  }
+
   const handleMouseDown = () => {
     if (props.action === 'NONE') return
     if (!props.id) return
@@ -45,6 +51,7 @@ const Tag = props => {
     <span
       className={className}
       onClick={handleClick}
+      onDoubleClick={handleDoubleClick}
       onMouseDown={handleMouseDown}
       onMouseUp={handleMouseUp}
       style={style}

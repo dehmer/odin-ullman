@@ -28,7 +28,7 @@ documents.feature = (feature, cache = []) => {
     id: feature.id,
     scope: 'feature',
     tags: tags(feature),
-    text: `${t} ${hierarchy(sidc).join(' ')} ${layer.name}`
+    text: `${t} ${hierarchy(sidc).join(' ')} ${layer ? layer.name : ''}`
   }
 }
 
@@ -50,8 +50,12 @@ documents.group = group => {
  *
  */
 documents.layer = layer => {
-  const { name: text, hidden, tags } = layer
+  const { name: text, hidden, tags, type, active } = layer
   const links = layer.links || []
+
+  const socket = type === 'socket'
+    ? active ? [`ACTIVE`] : [`INACTIVE`]
+    : []
 
   return {
     id: layer.id,
@@ -59,6 +63,7 @@ documents.layer = layer => {
     text,
     tags: [
       hidden ? 'hidden' : 'visible',
+      ...[socket],
       ...(links.length ? ['link'] : []),
       ...(tags || [])
     ]

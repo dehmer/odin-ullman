@@ -19,10 +19,12 @@ const bindings = [
   ['f1', () => emitter.emit('storage/bookmark')],
   ['f2', () => emitter.emit('storage/group')],
   ['f3', () => emitter.emit('storage/snapshot')],
-  ['f4', () => emitter.emit('storage/layer')]
+  ['f4', () => emitter.emit('storage/layer')],
+  ['f5', () => emitter.emit('storage/socket')]
 ]
 
 bindings.forEach(([key, fn]) => Mousetrap.bind(key, fn))
+
 
 const app = document.createElement('div')
 document.body.appendChild(app)

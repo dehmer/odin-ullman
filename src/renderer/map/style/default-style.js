@@ -1,6 +1,6 @@
 import * as styles from 'ol/style'
 import * as SIDC from './sidc'
-import { primaryColor, accentColor } from './color-schemes'
+import { color } from './color-schemes'
 
 const labels = false
 
@@ -14,10 +14,14 @@ const regularShape = options => new styles.RegularShape(options)
 const scheme = 'medium'
 const styleOptions = ({ feature }) => {
   const sidc = feature.get('sidc')
+  const primaryColor = color(scheme)(feature)
+  const accentColor = primaryColor === 'black'
+    ? 'white'
+    : 'black'
 
   return {
-    primaryColor: primaryColor(scheme)(SIDC.identity(sidc)),
-    accentColor: accentColor(SIDC.identity(sidc)),
+    primaryColor,
+    accentColor,
     dashPattern: SIDC.status(sidc) === 'A' ? [20, 10] : null,
     thin: 2,
     thick: 3.5

@@ -18,10 +18,11 @@ options.feature = async feature => {
     return options.feature(await level.getItem(feature))
   }
 
-  const tags = ({ hidden, tags, links }, sidc) => [
+  const tags = ({ hidden, tags, links, follow }, sidc) => [
     'SCOPE:FEATURE:identify',
     ...((links || []).length ? ['IMAGE:LINKS:links:mdiLink'] : []),
     hidden ? 'SYSTEM:HIDDEN:show' : 'SYSTEM:VISIBLE:hide',
+    ...(follow ? ['SYSTEM:FOLLOW:NONE'] : []),
     ...dimensions(sidc).map(label => `SYSTEM:${label}:NONE`),
     ...scopes(sidc).map(label => `SYSTEM:${label}:NONE`),
     ...(identity(sidc)).map(label => `SYSTEM:${label}:NONE`),
@@ -31,7 +32,9 @@ options.feature = async feature => {
   const layer = await level.getItem(layerId(feature.id))
   const { properties } = feature
   const { sidc, t } = properties
-  const description = layer.name.toUpperCase() + ' ⏤ ' + hierarchy(sidc).join(' • ')
+  const description = layer
+    ? layer.name.toUpperCase() + ' ⏤ ' + hierarchy(sidc).join(' • ')
+    : hierarchy(sidc).join(' • ')
 
   return {
     id: feature.id,
@@ -39,7 +42,7 @@ options.feature = async feature => {
     description,
     url: url(sidc),
     tags: tags(feature, sidc),
-    capabilities: 'RENAME|TAG|DROP',
+    capabilities: 'RENAME|TAG|DROP|FOLLOW',
     actions: 'PRIMARY:panto'
   }
 }
@@ -84,17 +87,29 @@ options.layer = async layer => {
     return options.layer(await level.getItem(layer))
   }
 
-  const tags = ({ hidden, tags, links }) => [
-    'SCOPE:LAYER:identify',
-    ...((links || []).length ? ['IMAGE:LINKS:links:mdiLink'] : []),
-    'IMAGE:OPEN:open:mdiArrowDown',
-    hidden ? 'SYSTEM:HIDDEN:show' : 'SYSTEM:VISIBLE:hide',
-    ...(tags || []).map(label => `USER:${label}:NONE`)
-  ].join(' ')
+  const tags = feature => {
+    const { type, hidden, active, tags, links } = feature
+
+    const socket = type === 'socket'
+      ? active
+        ? [`SYSTEM:ACTIVE:suspend`]
+        : [`SYSTEM:INACTIVE:resume`]
+      : []
+
+    return [
+      'SCOPE:LAYER:identify',
+      ...((links || []).length ? ['IMAGE:LINKS:links:mdiLink'] : []),
+      'IMAGE:OPEN:open:mdiArrowDown',
+      hidden ? 'SYSTEM:HIDDEN:show' : 'SYSTEM:VISIBLE:hide',
+      ...[socket],
+      ...(tags || []).map(label => `USER:${label}:NONE`)
+    ].join(' ').replace('  ', ' ').trim()
+  }
 
   return {
     id: layer.id,
     title: layer.name,
+    description: layer.type === 'socket' ? layer.url : null,
     tags: tags(layer),
     capabilities: 'RENAME|TAG|DROP',
     actions: 'PRIMARY:panto'

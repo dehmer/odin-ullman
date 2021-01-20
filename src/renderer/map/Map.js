@@ -46,17 +46,20 @@ export const Map = () => {
 
     const deselectedLayer = new VectorLayer({
       source: deselectedSource,
-      style: style('default', deselectedSource)
+      style: style('default', deselectedSource),
+      updateWhileAnimating: true
     })
 
     const selectedLayer = new VectorLayer({
       source: selectedSource,
-      style: style('selected', selectedSource)
+      style: style('selected', selectedSource),
+      updateWhileAnimating: true
     })
 
     const highlightLayer = new VectorLayer({
       source: new VectorSource({ features: highlightedFeatures }),
-      style: highlightStyle
+      style: highlightStyle,
+      updateWhileAnimating: true
     })
 
     const view = new ol.View(viewOptions)
@@ -94,7 +97,12 @@ export const Map = () => {
       }, true)
     })
 
-    emitter.on('map/panto', ({ center, resolution }) => view.animate({ center, resolution }))
+    emitter.on('map/panto', ({ center, resolution, rotation }) => view.animate({
+      center,
+      resolution,
+      rotation,
+      duration: 100
+    }))
 
     emitter.on('selection', () => {
       const selectionCount = selectedSource.getFeatures().length

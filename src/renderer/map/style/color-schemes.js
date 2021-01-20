@@ -1,7 +1,7 @@
 import * as R from 'ramda'
+import * as SIDC from './sidc'
 
-// TODO: make module private
-export const colorSchemes = {
+const colorSchemes = {
   dark: {
     red: '#C80000', // RGB(200, 0, 0)
     blue: '#006B8C', // RGB(0, 107, 140)
@@ -27,8 +27,7 @@ export const colorSchemes = {
 
 const includes = xs => x => xs.includes(x)
 
-/** 2525C, table TABLE XIII */
-export const primaryColor = scheme => R.cond([
+const identityColor = scheme => R.cond([
   [includes(['A', 'F', 'M', 'D']), R.always(colorSchemes[scheme].blue)],
   [includes(['H', 'J', 'K', 'S']), R.always(colorSchemes[scheme].red)],
   [includes(['N', 'L']), R.always(colorSchemes[scheme].green)],
@@ -36,7 +35,10 @@ export const primaryColor = scheme => R.cond([
   [R.T, R.always('black')]
 ])
 
-export const accentColor = R.cond([
-  [R.equals('-'), R.always('white')],
-  [R.T, R.always('black')]
-])
+/** 2525C, table TABLE XIII */
+export const color = scheme => feature => {
+  const color = feature.get('color')
+  return color
+    ? color
+    : identityColor(scheme)(SIDC.identity(feature.get('sidc')))
+}

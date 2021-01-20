@@ -86,6 +86,17 @@ emitter.on(':id(.*)/hide', async ({ id }) => {
   level.batch(ops)
 })
 
+emitter.on(`:id(${LAYER_ID})/suspend`, async ({ id }) => {
+  const socket = await level.getItem(id)
+  socket.active = false
+  level.setItem(socket)
+})
+
+emitter.on(`:id(${LAYER_ID})/resume`, async ({ id }) => {
+  const socket = await level.getItem(id)
+  socket.active = true
+  level.setItem(socket)
+})
 
 const rename = async ({ id, name }) => {
   const item = await level.getItem(id)
@@ -231,6 +242,24 @@ emitter.on('storage/bookmark', async () => {
 /**
  *
  */
+emitter.on('storage/socket', () => {
+  const layer = {
+    id: layerId(),
+    name: `Socket Layer - ${currentDateTime()}`,
+    type: 'socket',
+    url: 'ws://localhost:3000',
+    active: true
+  }
+
+  level.setItem(layer)
+  emitter.emit('search/scope/layer')
+  selection.set([layer.id])
+})
+
+
+/**
+ *
+ */
 emitter.on('search/current', ({ terms }) => {
   level.setItem({ id: 'search:', terms }, true)
 })
@@ -329,49 +358,24 @@ emitter.on('features/geometry/update', async ({ geometries }) => {
   level.batch(ops)
 })
 
-
 /**
- * Create new layer from last search.
+ *
  */
-emitter.on('storage/layer', async () => {
-  const pid = layerId()
-  const item = await level.getItem('search:')
-  const ids = searchIndex(item.terms)
-    .filter(({ ref }) => !isGroup(ref) && !isSymbol(ref))
-    .map(({ ref }) => ref)
+emitter.on(`:id(${FEATURE_ID})/follow`, async ({ id }) => {
+  const feature = await level.getItem(id)
+  if (feature.follow) {
+    delete feature.follow
+    const ops = [{ type: 'put', key: id, value: feature }]
+    level.batch(ops)
+  } else {
+    feature.follow = true
+    const ops = (await level.getItems('feature:', feature => feature.follow))
+      .map(R.tap(feature => delete feature.follow))
+      .map(feature => ({ type: 'put', key: feature.id, value: feature }))
 
-  const items = await ids.reduce(async function reducer (accp, id) {
-    const acc = await accp
-    if (isLayer(id)) {
-      const featureIds = await level.keys(`feature:${id.split(':')[1]}`)
-      return featureIds.reduce(reducer, acc)
-    } else if (isPlace(id)) {
-      const place = await level.getItem(id)
-      return acc.concat({
-        type: 'Feature',
-        geometry: place.geojson,
-        properties: { t: place.name },
-        id: featureId(pid),
-        tags: place.tags
-      })
-    } else if (isFeature(id)) {
-      const feature = { ...(await level.getItem(id)), id: featureId(pid) }
-      return acc.concat(feature)
-    }
-    else return acc
-  }, [])
-
-  const layer = {
-    id: pid,
-    name: `Layer - ${currentDateTime()}`,
-    tags: R.uniq(items.flatMap(R.prop('tags'))).filter(R.identity)
+    ops.push({ type: 'put', key: id, value: feature })
+    level.batch(ops)
   }
-
-  const ops = items.concat(layer).map(item => ({ type: 'put', key: item.id, value: item}))
-  level.batch(ops)
-  emitter.emit('search/scope/layer')
-  selection.set([pid])
 })
-
 
 // <- command handlers

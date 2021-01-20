@@ -8,6 +8,7 @@ import emitter from '../emitter'
 import selection from '../selection'
 import { readFeature, writeFeaturesObject } from '../storage/format'
 import { currentDateTime } from './datetime'
+import './socket'
 
 // -> OpenLayers interface (ol/source/Vector)
 
@@ -42,6 +43,7 @@ const isVisible = feature => feature && !feature.hidden
   const features = await level.getItems('feature:', isVisible)
   addFeatures(features.map(readFeature))
 })()
+
 
 
 /**
