@@ -12,7 +12,7 @@ if (!storage.keys().some(key => key.startsWith('symbol:'))) {
     return { type: 'put', key: symbol.id, value: symbol }
   })
 
-  storage.batch(ops)
+  level.batch(ops)
 }
 
 export const hierarchy = sidc => {

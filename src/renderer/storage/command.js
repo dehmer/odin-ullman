@@ -47,7 +47,7 @@ emitter.on('layers/import', async ({ layers }) => {
     return acc
   }, ops)
 
-  storage.batch(ops)
+  level.batch(ops)
 })
 
 const contained = (() => {
@@ -74,7 +74,7 @@ emitter.on(':id(.*)/show', ({ id }) => {
     .map(R.tap(item => delete item.hidden))
     .reduce((acc, item) => acc.concat({ type: 'put', key: item.id, value: item }), [])
 
-  storage.batch(ops)
+  level.batch(ops)
 })
 
 emitter.on(':id(.*)/hide', ({ id }) => {
@@ -84,7 +84,7 @@ emitter.on(':id(.*)/hide', ({ id }) => {
     .map(R.tap(item => (item.hidden = true)))
     .reduce((acc, item) => acc.concat({ type: 'put', key: item.id, value: item }), [])
 
-  storage.batch(ops)
+  level.batch(ops)
 })
 
 
@@ -172,7 +172,7 @@ emitter.on('items/remove', async ({ ids }) => {
   const items = await loadItems(uniqueIds, {})
   const ops = {}
   uniqueIds.forEach(remove(items, ops))
-  storage.batch(Object.entries(ops).map(([key, value]) => ({ ...value, key })))
+  level.batch(Object.entries(ops).map(([key, value]) => ({ ...value, key })))
 })
 
 
@@ -200,7 +200,7 @@ emitter.on('storage/group', async () => {
     ...fields
   }
 
-  storage.batch([{ type: 'put', key: group.id, value: group }])
+  level.batch([{ type: 'put', key: group.id, value: group }])
 })
 
 
@@ -223,7 +223,7 @@ emitter.on('storage/bookmark', async () => {
     resolution: view.resolution
   }
 
-  storage.batch([{ type: 'put', key: item.id, value: item }])
+  level.batch([{ type: 'put', key: item.id, value: item }])
   emitter.emit('search/scope/place')
   selection.set([item.id])
 })
@@ -293,7 +293,7 @@ emitter.on(`:id(${FEATURE_ID})/links/add`, async ({ id, files }) => {
   feature.links = [...(feature.links || []), ...links.map(link => link.id)]
   ops.push({ type: 'put', key: id, value: feature })
 
-  storage.batch(ops)
+  level.batch(ops)
 })
 
 
@@ -315,7 +315,7 @@ emitter.on(`:id(${LAYER_ID})/links/add`, async ({ id, files }) => {
   const ops = links.map(link => ({ type: 'put', key: link.id, value: link }))
   layer.links = [...(layer.links || []), ...links.map(link => link.id)]
   ops.push({ type: 'put', key: id, value: layer })
-  storage.batch(ops)
+  level.batch(ops)
 })
 
 
@@ -346,7 +346,7 @@ emitter.on('storage/features/add', async ({ feature }) => {
   const item = writeFeatureObject(feature)
   item.id = featureId(layer.id)
   ops.push({ type: 'put', key: item.id, value: item })
-  storage.batch(ops)
+  level.batch(ops)
 })
 
 
@@ -360,7 +360,7 @@ emitter.on('features/geometry/update', async ({ geometries }) => {
     return (await acc).concat({ type: 'put', key: id, value: feature })
   }, [])
 
-  storage.batch(ops)
+  level.batch(ops)
 })
 
 // <- command handlers

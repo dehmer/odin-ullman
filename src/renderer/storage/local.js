@@ -23,13 +23,10 @@ const keys = (prefix = '') => {
 }
 
 const batch = ops => {
-  level.batch(ops)
   ops.forEach(op => {
     if (op.type === 'del') removeItem(op.key)
     else if (op.type === 'put') setItem(op.value, true)
   })
-
-  emitter.emit('storage/batch', { ops })
 }
 
 export const storage = {

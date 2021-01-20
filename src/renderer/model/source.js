@@ -1,11 +1,9 @@
-/* eslint-disable import/no-duplicates */
 import Collection from 'ol/Collection'
 import Feature from 'ol/Feature'
 import VectorSource from 'ol/source/Vector'
 import uuid from 'uuid-random'
-import { storage } from '../storage'
-import { featureId } from '../storage/ids'
-import { isFeature } from '../storage/ids'
+import * as level from '../storage/level'
+import { featureId, isFeature } from '../storage/ids'
 import emitter from '../emitter'
 import selection from '../selection'
 import { readFeature, writeFeaturesObject } from '../storage/format'
@@ -40,14 +38,9 @@ const isVisible = feature => feature && !feature.hidden
 /**
  * Initial population.
  */
-;(() => {
-  const features = storage.keys()
-    .filter(isFeature)
-    .map(storage.getItem)
-    .filter(isVisible)
-    .map(readFeature)
-
-  addFeatures(features)
+;(async () => {
+  const features = await level.getItems('feature:', isVisible)
+  addFeatures(features.map(readFeature))
 })()
 
 
@@ -108,7 +101,7 @@ emitter.on('storage/snapshot', () => {
 
   ops.push({ type: 'put', key: layer.id, value: layer })
   emitter.emit('search/scope/layer')
-  storage.batch(ops)
+  level.batch(ops)
   selection.set([layer.id])
 })
 

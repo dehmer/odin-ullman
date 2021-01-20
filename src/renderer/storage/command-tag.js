@@ -2,6 +2,7 @@ import * as R from 'ramda'
 import emitter from '../emitter'
 import selection from '../selection'
 import { storage } from '.'
+import * as level from './level'
 import { isLayer, isPlace, isGroup } from './ids'
 
 const taggable = id => !isGroup(id)
@@ -17,15 +18,15 @@ const removetag_ = tag => item => (item.tags = (item.tags || []).filter(x => x.t
 /**
  *
  */
-emitter.on(`:id(.*)/tag/add`, ({ id, tag }) => {
+emitter.on(`:id(.*)/tag/add`, async ({ id, tag }) => {
 
   // 'default' tag can only by applied to a single layer.
   const ids = tag.toLowerCase() === 'default' && isLayer(id)
     ? [id]
     : R.uniq([id, ...selection.selected(taggable)])
 
-  const ops = ids
-    .map(storage.getItem)
+  const items = await Promise.all(ids.map(level.getItem))
+  const ops = items
     .map(R.tap(addtag_(tag)))
     .reduce((acc, item) => acc.concat({ type: 'put', key: item.id, value: item }), [])
 
@@ -36,18 +37,20 @@ emitter.on(`:id(.*)/tag/add`, ({ id, tag }) => {
     .map(R.tap(removetag_('default')))
     .forEach(layer => ops.push({ type: 'put', key: layer.id, value: layer }))
 
-  storage.batch(ops)
+  level.batch(ops)
 })
 
 
 /**
  *
  */
-emitter.on(`:id(.*)/tag/remove`, ({ id, tag }) => {
-  const ops = R.uniq([id, ...selection.selected(taggable)])
-    .map(storage.getItem)
+emitter.on(`:id(.*)/tag/remove`, async ({ id, tag }) => {
+  const ids = R.uniq([id, ...selection.selected(taggable)])
+  const items = await Promise.all(ids.map(level.getItem))
+
+  const ops = items
     .map(R.tap(removetag_(tag)))
     .reduce((acc, item) => acc.concat({ type: 'put', key: item.id, value: item }), [])
 
-  storage.batch(ops)
+  level.batch(ops)
 })

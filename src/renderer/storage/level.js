@@ -3,6 +3,7 @@ import levelup from 'levelup'
 import leveldown from 'leveldown'
 import encoding from 'encoding-down'
 import emitter from '../emitter'
+import { storage } from './local'
 
 // const master = level('master', { valueEncoding: 'json' })
 const master = levelup(encoding(leveldown('./master'), { valueEncoding: 'json' }))
@@ -60,4 +61,8 @@ export const map = fn => new Promise((resolve, reject) => {
     .once('end', () => resolve(xs))
 })
 
-export const batch = ops => project.batch(ops)
+export const batch = async ops => {
+  await project.batch(ops)
+  storage.batch(ops)
+  emitter.emit('storage/batch', { ops })
+}
