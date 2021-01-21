@@ -30,8 +30,10 @@ emitter.on(`:id(.*)/tag/add`, async ({ id, tag }) => {
     .reduce((acc, item) => acc.concat({ type: 'put', key: item.id, value: item }), [])
 
   // Special handling: layer/default.
+  const isDefault = layer => (layer.tags || []).includes('default')
   if (tag.toLowerCase() === 'default' && isLayer(id)) {
-    (await level.getItems('layer:', layer => (layer.tags || []).includes('default')))
+    ;(await level.getItems('layer:'))
+      .filter(isDefault)
       .map(R.tap(removetag_('default')))
       .forEach(layer => ops.push({ type: 'put', key: layer.id, value: layer }))
   }

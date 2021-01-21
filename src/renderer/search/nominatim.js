@@ -45,7 +45,8 @@ export const searchOSM = query => {
     switch (request.readyState) {
       case DONE: {
         try {
-          const removals = await level.getItems('place:', place => !place.sticky)
+          const isNotSticky = place => !place.sticky
+          const removals = (await level.getItems('place:')).filter(isNotSticky)
           const ops = removals.map(place => ({ type: 'del', key: place.id }))
 
           JSON.parse(request.responseText)

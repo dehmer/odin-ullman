@@ -39,7 +39,7 @@ const isVisible = feature => feature && !feature.hidden
  * Initial population.
  */
 ;(async () => {
-  const features = await level.getItems('feature:', isVisible)
+  const features = (await level.getItems('feature:')).filter(isVisible)
   addFeatures(features.map(readFeature))
 })()
 

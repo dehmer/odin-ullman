@@ -11,7 +11,7 @@ const descriptors = json.reduce((acc, descriptor) => {
 }, {})
 
 ;(async () => {
-  if (await level.existsKey('symbol:')) return
+  if (await level.exists('symbol:')) return
 
   // Populate storage with symbols if missing:
   level.batch(json.map(symbol => {

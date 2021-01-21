@@ -293,7 +293,8 @@ emitter.on('storage/features/add', async ({ feature }) => {
 
   const defaultLayer = async () => {
     const isDefault = layer => (layer.tags || []).includes('default')
-    const xs = await level.getItems('layer:', isDefault)
+    const xs = (await level.getItems('layer:')).filter(isDefault)
+
     if (xs.length) return xs[0]
     else {
       const layer = {

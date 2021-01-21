@@ -21,14 +21,14 @@ export const setItem = async (item, quiet = false) => {
 
 export const getItem = key => project.get(key).catch(() => null)
 
-export const getItems = (prefix, p = (() => true)) => new Promise((resolve, reject) => {
+export const getItems = prefix => new Promise((resolve, reject) => {
   const xs = []
   const options = prefix
     ? { keys: false, values: true, gte: prefix, lte: prefix + '\xff' }
     : { keys: false, values: true }
 
   project.createReadStream(options)
-    .on('data', data => p(data) ? xs.push(data) : R.always())
+    .on('data', data => xs.push(data))
     .on('error', reject)
     .once('end', () => resolve(xs))
 })
@@ -45,29 +45,12 @@ export const keys = prefix => new Promise((resolve, reject) => {
     .once('end', () => resolve(xs))
 })
 
-export const forEach = fn => new Promise((resolve, reject) => {
-  const options = { keys: false, values: true }
-  project.createReadStream(options)
-    .on('data', fn)
-    .on('error', reject)
-    .once('end', () => resolve())
-})
-
-export const map = fn => new Promise((resolve, reject) => {
-  const xs = []
-  const options = { keys: false, values: true }
-  project.createReadStream(options)
-    .on('data', data => xs.push(fn(data)))
-    .on('error', reject)
-    .once('end', () => resolve(xs))
-})
-
 export const batch = async ops => {
   await project.batch(ops)
   emitter.emit('storage/batch', { ops })
 }
 
-export const existsKey = prefix => new Promise((resolve, reject) => {
+export const exists = prefix => new Promise((resolve, reject) => {
   const options = { keys: true, values: false, gte: prefix, lte: prefix + '\xff' }
   project.createReadStream(options)
     .on('data', () => resolve(true))
