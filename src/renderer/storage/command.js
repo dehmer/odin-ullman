@@ -233,7 +233,7 @@ emitter.on('storage/bookmark', async () => {
  *
  */
 emitter.on('search/current', ({ terms }) => {
-  level.put({ id: 'search:', terms }, true)
+  level.put({ id: 'search:', terms }, { quiet: true, optional: true })
 })
 
 

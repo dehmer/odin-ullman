@@ -10,8 +10,12 @@ var project /* last open project is loaded below */
 
 const isMasterKey = key => key.startsWith('project:') || key.startsWith('symbol:')
 
-export const put = async (item, quiet = false) => {
+export const put = async (item, ops) => {
+  const quiet = ops && ops.quiet
+  const optional = ops && ops.optional
+
   if (isMasterKey(item.id)) await master.put(item.id, item)
+  else if (!project && optional) console.error('project not open; discarding value', item.id)
   else await project.put(item.id, item)
   if (!quiet) emitter.emit('storage/put', { key: item.id, value: item })
 }

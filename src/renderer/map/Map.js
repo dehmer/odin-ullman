@@ -90,7 +90,7 @@ export const Map = () => {
         center: view.getCenter(),
         resolution: view.getResolution(),
         rotation: view.getRotation()
-      }, true)
+      }, { quiet: true })
     })
 
     emitter.on('map/panto', ({ center, resolution }) => view.animate({ center, resolution }))

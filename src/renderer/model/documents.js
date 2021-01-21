@@ -70,17 +70,19 @@ documents.layer = layer => {
  *
  */
 documents.symbol = symbol => {
-  const tags = ({ dimension, scope, tags }) => [
+  const { dimension, scope } = symbol
+
+  const tags = [
     ...dimension ? dimension.split(', ') : [],
     ...scope ? scope.split(', ') : [],
-    ...(tags || [])
+    ...(symbol.tags || [])
   ]
 
   return ({
     id: symbol.id,
     scope: 'symbol',
     text: symbol.hierarchy.join(' '),
-    tags: tags(symbol)
+    tags
   })
 }
 
@@ -110,9 +112,16 @@ documents.link = link => ({
 /**
  *
  */
-documents.project = project => ({
-  id: project.id,
-  scope: 'project',
-  text: project.name,
-  tags: project.open ? ['open'] : ''
-})
+documents.project = project => {
+  const tags = [
+    ...(project.open ? ['open'] : []),
+    ...(project.tags || [])
+  ]
+
+  return {
+    id: project.id,
+    scope: 'project',
+    text: project.name,
+    tags
+  }
+}
