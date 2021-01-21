@@ -2,7 +2,7 @@ import React from 'react'
 import TagList from './TagList'
 import emitter from '../emitter'
 
-const scopes = ['ALL', 'LAYER', 'FEATURE', 'LINK', 'GROUP', 'SYMBOL', 'PLACE']
+const scopes = ['ALL', 'LAYER', 'FEATURE', 'LINK', 'GROUP', 'SYMBOL', 'PLACE', 'PROJECT']
 const action = 'search/scope'
 
 const formatTags = scope => {

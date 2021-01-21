@@ -5,7 +5,7 @@ import DateTime from 'luxon/src/datetime'
 import * as level from './level'
 import { layerId, featureId } from './ids'
 import { isLayer, isFeature, isGroup, isSymbol, isPlace, isLink } from './ids'
-import { FEATURE_ID, LAYER_ID, PLACE_ID, GROUP_ID } from './ids'
+import { FEATURE_ID, LAYER_ID, PLACE_ID, GROUP_ID, PROJECT_ID } from './ids'
 import emitter from '../emitter'
 import { searchIndex } from '../search/lunr'
 import { writeGeometryObject, writeFeatureObject } from './format'
@@ -19,7 +19,7 @@ emitter.on('layers/import', async ({ layers }) => {
 
   // Overwrite existing layers, i.e. delete before re-adding.
   const names = layers.map(R.prop('name'))
-  const loaded = await level.getItems('layer:')
+  const loaded = await level.values('layer:')
   const removals = loaded.filter(layer => names.includes(layer.name))
 
   const ops = await removals.reduce(async (accp, layer) => {
@@ -53,16 +53,16 @@ const contained = async (accp, id) => {
   const acc = await accp
 
   if (isFeature(id)) {
-    const item = await level.getItem(id)
+    const item = await level.value(id)
     return acc.concat(item)
   } else if (isGroup(id)) {
-    const item = await level.getItem(id)
+    const item = await level.value(id)
     const ids = searchIndex(item.terms)
       .filter(({ ref }) => !isGroup(ref) && !isSymbol(ref))
       .map(({ ref }) => ref)
     return ids.reduce(contained, acc)
   } else if (isLayer(id)) {
-    acc.push(await level.getItem(id))
+    acc.push(await level.value(id))
     const ids = await level.keys(`feature:${id.split(':')[1]}`)
     return ids.reduce(contained, acc)
   } else return acc
@@ -88,22 +88,23 @@ emitter.on(':id(.*)/hide', async ({ id }) => {
 
 
 const rename = async ({ id, name }) => {
-  const item = await level.getItem(id)
+  const item = await level.value(id)
   item.name = name.trim()
-  level.setItem(item)
+  level.put(item)
 }
 
 emitter.on(`:id(${LAYER_ID})/rename`, rename)
 emitter.on(`:id(${GROUP_ID})/rename`, rename)
+emitter.on(`:id(${PROJECT_ID})/rename`, rename)
 
 
 /**
  *
  */
 emitter.on(`:id(${FEATURE_ID})/rename`, async ({ id, name }) => {
-  const feature = await level.getItem(id)
+  const feature = await level.value(id)
   feature.properties.t = name.trim()
-  level.setItem(feature)
+  level.put(feature)
 })
 
 
@@ -111,10 +112,10 @@ emitter.on(`:id(${FEATURE_ID})/rename`, async ({ id, name }) => {
  *
  */
 emitter.on(`:id(${PLACE_ID})/rename`, async ({ id, name }) => {
-  const place = await level.getItem(id)
+  const place = await level.value(id)
   place.name = name.trim()
   place.sticky = true
-  level.setItem(place)
+  level.put(place)
 })
 
 
@@ -126,7 +127,7 @@ emitter.on('items/remove', async ({ ids }) => {
 
   const loadItems = async (ids, acc) => {
     if (!ids) return acc
-    const ps = ids.filter(id => !acc[id]).map(level.getItem)
+    const ps = ids.filter(id => !acc[id]).map(level.value)
     const items = await Promise.all(ps)
 
     return items.reduce(async (pacc, item) => {
@@ -179,7 +180,7 @@ emitter.on('items/remove', async ({ ids }) => {
  *
  */
 emitter.on('storage/group', async () => {
-  const search = await level.getItem('search:')
+  const search = await level.value('search:')
   if (!search) return
   const { terms } = search
 
@@ -207,7 +208,7 @@ emitter.on('storage/group', async () => {
  *
  */
 emitter.on('storage/bookmark', async () => {
-  const view = await level.getItem('session:map.view')
+  const view = await level.value('session:map.view')
   if (!view) return
 
   const point = new geom.Point(view.center)
@@ -232,7 +233,7 @@ emitter.on('storage/bookmark', async () => {
  *
  */
 emitter.on('search/current', ({ terms }) => {
-  level.setItem({ id: 'search:', terms }, true)
+  level.put({ id: 'search:', terms }, true)
 })
 
 
@@ -240,7 +241,7 @@ emitter.on('search/current', ({ terms }) => {
  *
  */
 emitter.on(`:id(${FEATURE_ID})/links/add`, async ({ id, files }) => {
-  const feature = await level.getItem(id)
+  const feature = await level.value(id)
 
   const links = files.map(file => ({
     id: `link:${uuid()}`,
@@ -267,7 +268,7 @@ emitter.on(`:id(${FEATURE_ID})/links/add`, async ({ id, files }) => {
  *
  */
 emitter.on(`:id(${LAYER_ID})/links/add`, async ({ id, files }) => {
-  const layer = await level.getItem(id)
+  const layer = await level.value(id)
 
   const links = files.map(file => ({
     id: `link:${uuid()}`,
@@ -293,7 +294,7 @@ emitter.on('storage/features/add', async ({ feature }) => {
 
   const defaultLayer = async () => {
     const isDefault = layer => (layer.tags || []).includes('default')
-    const xs = (await level.getItems('layer:')).filter(isDefault)
+    const xs = (await level.values('layer:')).filter(isDefault)
 
     if (xs.length) return xs[0]
     else {
@@ -322,7 +323,7 @@ emitter.on('storage/features/add', async ({ feature }) => {
  */
 emitter.on('features/geometry/update', async ({ geometries }) => {
   const ops = await Object.entries(geometries).reduce(async (acc, [id, geometry]) => {
-    const feature = await level.getItem(id)
+    const feature = await level.value(id)
     feature.geometry = writeGeometryObject(geometry)
     return (await acc).concat({ type: 'put', key: id, value: feature })
   }, [])
@@ -336,7 +337,7 @@ emitter.on('features/geometry/update', async ({ geometries }) => {
  */
 emitter.on('storage/layer', async () => {
   const pid = layerId()
-  const item = await level.getItem('search:')
+  const item = await level.value('search:')
   const ids = searchIndex(item.terms)
     .filter(({ ref }) => !isGroup(ref) && !isSymbol(ref))
     .map(({ ref }) => ref)
@@ -347,7 +348,7 @@ emitter.on('storage/layer', async () => {
       const featureIds = await level.keys(`feature:${id.split(':')[1]}`)
       return featureIds.reduce(reducer, acc)
     } else if (isPlace(id)) {
-      const place = await level.getItem(id)
+      const place = await level.value(id)
       return acc.concat({
         type: 'Feature',
         geometry: place.geojson,
@@ -356,7 +357,7 @@ emitter.on('storage/layer', async () => {
         tags: place.tags
       })
     } else if (isFeature(id)) {
-      const feature = { ...(await level.getItem(id)), id: featureId(pid) }
+      const feature = { ...(await level.value(id)), id: featureId(pid) }
       return acc.concat(feature)
     }
     else return acc
@@ -374,5 +375,32 @@ emitter.on('storage/layer', async () => {
   selection.set([pid])
 })
 
+emitter.on(`:id(${PROJECT_ID})/open`, async ({ id }) => {
+  const project = await level.value(id)
+  if (project.open) return
+
+  const isOpen = project => project.open
+  const projects = (await level.values('project:')).filter(isOpen)
+  const ops = projects.reduce((acc, project) => {
+    delete project.open
+    acc.push({ type: 'put', key: project.id, value: project })
+    return acc
+  }, [])
+
+  ops.push({ type: 'put', key: id, value: { ...project, open: true }})
+  await level.open(id)
+  level.batch(ops)
+})
+
+emitter.on('storage/project', () => {
+  const project = {
+    id: `project:${uuid()}`,
+    name: `Project - ${currentDateTime()}`
+  }
+
+  level.put(project)
+  emitter.emit('search/scope/project')
+  selection.set([project.id])
+})
 
 // <- command handlers

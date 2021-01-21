@@ -21,11 +21,13 @@ const descriptors = json.reduce((acc, descriptor) => {
 })()
 
 export const hierarchy = sidc => {
+  if (!sidc) return ['N/A']
   const descriptor = descriptors[normalize(sidc)]
   return descriptor ? descriptor.hierarchy : ['N/A']
 }
 
 export const dimensions = sidc => {
+  if (!sidc) return []
   const descriptor = descriptors[normalize(sidc)]
   if (!descriptor) return []
   return descriptor.dimension
@@ -34,6 +36,7 @@ export const dimensions = sidc => {
 }
 
 export const scopes = sidc => {
+  if (!sidc) return []
   const descriptor = descriptors[normalize(sidc)]
   if (!descriptor) return []
   return descriptor.scope

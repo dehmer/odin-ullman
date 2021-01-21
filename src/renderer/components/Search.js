@@ -31,12 +31,14 @@ export const Search = () => {
       event.stopPropagation()
       if (event.metaKey) emitter.emit('storage/group')
       else emitter.emit('search/filter/updated', { value, mode: 'enter' })
-    } else if (event.key === 'Digit1' && event.metaKey) emitter.emit('search/scope/all')
-    else if (event.key === 'Digit2' && event.metaKey) emitter.emit('search/scope/layer')
-    else if (event.key === 'Digit3' && event.metaKey) emitter.emit('search/scope/feature')
-    else if (event.key === 'Digit4' && event.metaKey) emitter.emit('search/scope/symbol')
-    else if (event.key === 'Digit5' && event.metaKey) emitter.emit('search/scope/group')
-    else if (event.key === 'Digit6' && event.metaKey) emitter.emit('search/scope/place')
+    } else if (event.key === '1' && event.metaKey) emitter.emit('search/scope/all')
+    else if (event.key === '2' && event.metaKey) emitter.emit('search/scope/layer')
+    else if (event.key === '3' && event.metaKey) emitter.emit('search/scope/feature')
+    else if (event.key === '4' && event.metaKey) emitter.emit('search/scope/link')
+    else if (event.key === '5' && event.metaKey) emitter.emit('search/scope/group')
+    else if (event.key === '6' && event.metaKey) emitter.emit('search/scope/symbol')
+    else if (event.key === '7' && event.metaKey) emitter.emit('search/scope/place')
+    else if (event.key === '8' && event.metaKey) emitter.emit('search/scope/project')
   }
 
   return (

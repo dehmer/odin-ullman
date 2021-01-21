@@ -10,7 +10,7 @@ import * as TS from '../map/ts'
  *
  */
 const layer = async id => {
-  const features = await level.getItems(`feature:${id.split(':')[1]}`)
+  const features = await level.values(`feature:${id.split(':')[1]}`)
   const geometries = features
     .map(readFeature)
     .map(feature => feature.getGeometry())
@@ -24,7 +24,7 @@ const layer = async id => {
  *
  */
 const feature = async id => {
-  const item = await level.getItem(id)
+  const item = await level.value(id)
   const feature = readFeature(item)
   const geometry = TS.read(feature.getGeometry())
   const bounds = feature.getGeometry().getType() === 'Polygon'
@@ -38,7 +38,7 @@ const feature = async id => {
  *
  */
 const place = async id => {
-  const item = await level.getItem(id)
+  const item = await level.value(id)
   return readGeometry(item.geojson)
 }
 
@@ -47,15 +47,15 @@ const place = async id => {
  *
  */
 const group = async id => {
-  const item = await level.getItem(id)
+  const item = await level.value(id)
 
   const items = (await Promise.all(searchIndex(item.terms)
     .filter(({ ref }) => !isGroup(ref) && !isSymbol(ref))
     .map(({ ref }) => ref)
     .filter(id => isLayer(id) || isFeature(id) || isPlace(id))
     .flatMap(id => isLayer(id)
-      ? level.getItems(`feature:${id.split(':')[1]}`)
-      : level.getItem(id)
+      ? level.values(`feature:${id.split(':')[1]}`)
+      : level.value(id)
     )
   )).flat()
 

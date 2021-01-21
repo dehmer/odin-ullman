@@ -24,7 +24,7 @@ emitter.on(`:id(.*)/tag/add`, async ({ id, tag }) => {
     ? [id]
     : R.uniq([id, ...selection.selected(taggable)])
 
-  const items = await Promise.all(ids.map(level.getItem))
+  const items = await Promise.all(ids.map(level.value))
   const ops = items
     .map(R.tap(addtag_(tag)))
     .reduce((acc, item) => acc.concat({ type: 'put', key: item.id, value: item }), [])
@@ -32,7 +32,7 @@ emitter.on(`:id(.*)/tag/add`, async ({ id, tag }) => {
   // Special handling: layer/default.
   const isDefault = layer => (layer.tags || []).includes('default')
   if (tag.toLowerCase() === 'default' && isLayer(id)) {
-    ;(await level.getItems('layer:'))
+    ;(await level.values('layer:'))
       .filter(isDefault)
       .map(R.tap(removetag_('default')))
       .forEach(layer => ops.push({ type: 'put', key: layer.id, value: layer }))
@@ -47,7 +47,7 @@ emitter.on(`:id(.*)/tag/add`, async ({ id, tag }) => {
  */
 emitter.on(`:id(.*)/tag/remove`, async ({ id, tag }) => {
   const ids = R.uniq([id, ...selection.selected(taggable)])
-  const items = await Promise.all(ids.map(level.getItem))
+  const items = await Promise.all(ids.map(level.value))
 
   const ops = items
     .map(R.tap(removetag_(tag)))

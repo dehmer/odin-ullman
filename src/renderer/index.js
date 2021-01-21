@@ -16,10 +16,12 @@ const bindings = [
   ['command+5', () => emitter.emit('search/scope/group')],
   ['command+6', () => emitter.emit('search/scope/symbol')],
   ['command+7', () => emitter.emit('search/scope/place')],
+  ['command+8', () => emitter.emit('search/scope/project')],
   ['f1', () => emitter.emit('storage/bookmark')],
   ['f2', () => emitter.emit('storage/group')],
   ['f3', () => emitter.emit('storage/snapshot')],
-  ['f4', () => emitter.emit('storage/layer')]
+  ['f4', () => emitter.emit('storage/layer')],
+  ['f5', () => emitter.emit('storage/project')]
 ]
 
 bindings.forEach(([key, fn]) => Mousetrap.bind(key, fn))

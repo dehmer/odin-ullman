@@ -15,11 +15,10 @@ import geometry from './geometry'
 export const highlightedFeatures = new Collection()
 
 const option = id => options[id.split(':')[0]](id)
-const getItem = level.getItem
 
 
 emitter.on(`:id(${LAYER_ID})/open`, async ({ id }) => {
-  const layer = await getItem(id)
+  const layer = await level.value(id)
   const uuid = id.split(':')[1]
 
   const features = async () => {
@@ -34,7 +33,7 @@ emitter.on(`:id(${LAYER_ID})/open`, async ({ id }) => {
 })
 
 emitter.on(`:id(${GROUP_ID})/open`, async ({ id }) => {
-  const group = await getItem(id)
+  const group = await level.value(id)
 
   const options = async () => {
     const ids = searchIndex(group.terms)
@@ -50,7 +49,7 @@ emitter.on(`:id(${GROUP_ID})/open`, async ({ id }) => {
 })
 
 emitter.on(`:id(${PLACE_ID})/panto`, async ({ id }) => {
-  const item = await level.getItem(id)
+  const item = await level.value(id)
   const geometry = readGeometry(item.geojson)
   const extent = geometry.getExtent()
   const center = getCenter(extent)
@@ -58,7 +57,7 @@ emitter.on(`:id(${PLACE_ID})/panto`, async ({ id }) => {
 })
 
 emitter.on(`:id(${FEATURE_ID})/panto`, async ({ id }) => {
-  const item = await getItem(id)
+  const item = await level.value(id)
   const geometry = readFeature(item).getGeometry()
   const center = getCenter(geometry.getExtent())
   emitter.emit('map/panto', { center })
@@ -83,9 +82,9 @@ emitter.on(':dontcare(.*)/identify/up', () => {
 })
 
 emitter.on(`:id(${FEATURE_ID})/links`, async ({ id }) => {
-  const feature = await getItem(id)
+  const feature = await level.value(id)
   const links = async () => {
-    const feature = await getItem(id)
+    const feature = await level.value(id)
     const links = (feature.links || []).map(option)
     return Promise.all(links)
   }
@@ -97,9 +96,9 @@ emitter.on(`:id(${FEATURE_ID})/links`, async ({ id }) => {
 })
 
 emitter.on(`:id(${LAYER_ID})/links`, async ({ id }) => {
-  const layer = await getItem(id)
+  const layer = await level.value(id)
   const links = async () => {
-    const layer = await getItem(id)
+    const layer = await level.value(id)
     const links = (layer.links || []).map(option)
     return Promise.all(links)
   }
@@ -111,7 +110,7 @@ emitter.on(`:id(${LAYER_ID})/links`, async ({ id }) => {
 })
 
 emitter.on(`:id(${SYMBOL_ID})/draw`, async ({ id }) => {
-  const descriptor = await level.getItem(id)
+  const descriptor = await level.value(id)
   const sidc = descriptor.sidc
   descriptor.sidc = `${sidc[0]}F${sidc[2]}P${sidc.substring(4)}`
   if (descriptor) emitter.emit('map/draw', { descriptor })

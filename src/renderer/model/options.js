@@ -15,7 +15,7 @@ export const options = {}
  */
 options.feature = async feature => {
   if (typeof feature === 'string') {
-    return options.feature(await level.getItem(feature))
+    return options.feature(await level.value(feature))
   }
 
   const tags = ({ hidden, tags, links }, sidc) => [
@@ -28,7 +28,7 @@ options.feature = async feature => {
     ...(tags || []).map(label => `USER:${label}:NONE`)
   ].join(' ')
 
-  const layer = await level.getItem(layerId(feature.id))
+  const layer = await level.value(layerId(feature.id))
   const { properties } = feature
   const { sidc, t } = properties
   const description = layer.name.toUpperCase() + ' ⏤ ' + hierarchy(sidc).join(' • ')
@@ -50,7 +50,7 @@ options.feature = async feature => {
  */
 options.group = async group => {
   if (typeof group === 'string') {
-    return options.group(await level.getItem(group))
+    return options.group(await level.value(group))
   }
 
   const ps = searchIndex(group.terms)
@@ -81,7 +81,7 @@ options.group = async group => {
  */
 options.layer = async layer => {
   if (typeof layer === 'string') {
-    return options.layer(await level.getItem(layer))
+    return options.layer(await level.value(layer))
   }
 
   const tags = ({ hidden, tags, links }) => [
@@ -106,8 +106,9 @@ options.layer = async layer => {
  * symbol:
  */
 options.symbol = async symbol => {
+  // console.log('[symbol]', symbol)
   if (typeof symbol === 'string') {
-    return options.symbol(await level.getItem(symbol))
+    return options.symbol(await level.value(symbol))
   }
 
   const replace = (s, i, r) => s.substring(0, i) + r + s.substring(i + r.length)
@@ -131,9 +132,12 @@ options.symbol = async symbol => {
   }
 }
 
+/**
+ * place:
+ */
 options.place = async place => {
   if (typeof place === 'string') {
-    return options.place(await level.getItem(place))
+    return options.place(await level.value(place))
   }
 
   const tags = place => [place.class, place.type]
@@ -159,10 +163,6 @@ options.place = async place => {
  * link:
  */
 options.link = async link => {
-  if (typeof link === 'string') {
-    return options.link(await level.getItem(link))
-  }
-
   const path = type => {
     switch (type) {
       case 'application/pdf': return 'mdiAdobeAcrobat'
@@ -185,3 +185,19 @@ options.link = async link => {
     capabilities: 'TAG'
   }
 }
+
+
+/**
+ * project:
+ */
+options.project = async project => ({
+  id: project.id,
+  title: project.name,
+  tags: [
+    'SCOPE:PROJECT:NONE',
+    ...(project.open ? ['SYSTEM:OPEN:NONE'] : []),
+    ...(project.tags || []).map(label => `USER:${label}:NONE`)
+  ].join(' '),
+  capabilities: 'TAG|RENAME',
+  actions: 'PRIMARY:open'
+})

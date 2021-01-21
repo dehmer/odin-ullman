@@ -4,6 +4,7 @@ import { searchOSM } from './nominatim'
 import emitter from '../emitter'
 import { options } from '../model/options'
 import { compare } from './compare'
+import * as level from '../storage/level'
 
 const limit = R.take(200)
 // const limit = R.identity /* no limits */
@@ -20,8 +21,10 @@ const sort = entries => entries.sort((a, b) => {
   else return compare(field)(a, b)
 })
 
-const option = async ref => options[ref.split(':')[0]](ref)
-const refs = R.map(({ ref }) => option(ref))
+const refs = async refs => {
+  const items = (await level.values(refs.map(({ ref }) => ref))).filter(R.identity)
+  return await Promise.all(items.map(item => options[item.id.split(':')[0]](item)))
+}
 
 const lunrProvider = scope => {
 
@@ -43,8 +46,8 @@ const lunrProvider = scope => {
 
   const search = async terms => {
     emitter.emit('search/current', { terms })
-    const items = await Promise.all(R.compose(refs, searchIndex)(terms || '+tags:pin'))
-    return R.compose(limit, sort)(items)
+    const options = await (R.compose(refs, searchIndex)(terms || '+tags:pin'))
+    return R.compose(limit, sort)(options)
   }
 
   return async (query, callback) => {

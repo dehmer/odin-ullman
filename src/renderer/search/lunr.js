@@ -18,7 +18,7 @@ var index
   const reindex = async () => {
     console.time('[lunr] re-index')
 
-    const items = await level.getItems()
+    const items = await level.values()
     const cache = items.reduce((acc, item) => {
       acc[item.id] = item
       return acc
@@ -44,7 +44,6 @@ var index
   }
 
   reindex()
-  emitter.on('storage/updated', reindex)
   emitter.on('storage/batch', reindex)
   emitter.on('storage/put', reindex)
 })()

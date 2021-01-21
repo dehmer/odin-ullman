@@ -105,3 +105,14 @@ documents.link = link => ({
   text: link.name,
   tags: link.tags
 })
+
+
+/**
+ *
+ */
+documents.project = project => ({
+  id: project.id,
+  scope: 'project',
+  text: project.name,
+  tags: project.open ? ['open'] : ''
+})
