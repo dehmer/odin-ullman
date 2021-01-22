@@ -24,6 +24,7 @@ export const isGroup = isId('group:')
 export const isSymbol = isId('symbol:')
 export const isPlace = isId('place:')
 export const isLink = isId('link:')
+export const isProject = isId('project:')
 
 export const FEATURE_ID = 'feature:[0-9a-f-]{36}/[0-9a-f-]{36}'
 export const LAYER_ID = 'layer:[0-9a-f-]{36}'

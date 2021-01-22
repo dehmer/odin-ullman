@@ -43,7 +43,6 @@ var index
     emitter.emit('index/updated')
   }
 
-  reindex()
   emitter.on('storage/batch', reindex)
   emitter.on('storage/put', reindex)
 })()

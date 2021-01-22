@@ -375,6 +375,9 @@ emitter.on('storage/layer', async () => {
   selection.set([pid])
 })
 
+/**
+ *
+ */
 emitter.on(`:id(${PROJECT_ID})/open`, async ({ id }) => {
   const project = await level.value(id)
   if (project.open) return
@@ -388,10 +391,13 @@ emitter.on(`:id(${PROJECT_ID})/open`, async ({ id }) => {
   }, [])
 
   ops.push({ type: 'put', key: id, value: { ...project, open: true }})
-  await level.open(id)
   level.batch(ops)
 })
 
+
+/**
+ *
+ */
 emitter.on('storage/project', () => {
   const project = {
     id: `project:${uuid()}`,
