@@ -1,6 +1,5 @@
 import * as R from 'ramda'
-import { storage } from '../storage'
-import emitter from '../emitter'
+import * as level from '../storage/level'
 import uuid from 'uuid-random'
 
 /* eslint-disable */
@@ -40,25 +39,24 @@ export const searchOSM = query => {
   lastValue = value
 
   const xhr = new XMLHttpRequest()
-  xhr.addEventListener('readystatechange', event => {
+  xhr.addEventListener('readystatechange', async event => {
     const request = event.target
 
     switch (request.readyState) {
       case DONE: {
         try {
-          const removal = storage.keys()
-            .filter(id => id.startsWith('place'))
-            .map(storage.getItem)
-            .filter(place => !place.sticky)
-            .map(R.prop('id'))
+          const isNotSticky = place => !place.sticky
+          const removals = (await level.values('place:')).filter(isNotSticky)
+          const ops = removals.map(place => ({ type: 'del', key: place.id }))
 
-          const addition = JSON.parse(request.responseText)
-            .map(place)
+          JSON.parse(request.responseText)
+            .reduce((acc, entry) => {
+              const item = place(entry)
+              acc.push({ type: 'put', key: item.id, value: item})
+              return acc
+            }, ops)
 
-          removal.forEach(storage.removeItem)
-          addition.forEach(storage.setItem)
-
-          emitter.emit('storage/updated', { addition, removal, update: [] })
+          level.batch(ops)
         } catch (err) {
           console.error('[nominatim]', err)
         }

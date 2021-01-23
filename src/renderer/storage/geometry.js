@@ -1,13 +1,17 @@
 import * as R from 'ramda'
 import { isLayer, isFeature, isGroup, isSymbol, isPlace } from './ids'
-import { getContainedFeatures } from './helpers'
 import { readGeometry, readFeature } from './format'
-import { storage } from '.'
+import * as level from './level'
 import { searchIndex } from '../search/lunr'
 import * as TS from '../map/ts'
 
-const layer = id => {
-  const geometries = getContainedFeatures(id)
+
+/**
+ *
+ */
+const layer = async id => {
+  const features = await level.values(`feature:${id.split(':')[1]}`)
+  const geometries = features
     .map(readFeature)
     .map(feature => feature.getGeometry())
     .map(TS.read)
@@ -15,8 +19,12 @@ const layer = id => {
   return TS.write(TS.minimumRectangle(collection))
 }
 
-const feature = id => {
-  const item = storage.getItem(id)
+
+/**
+ *
+ */
+const feature = async id => {
+  const item = await level.value(id)
   const feature = readFeature(item)
   const geometry = TS.read(feature.getGeometry())
   const bounds = feature.getGeometry().getType() === 'Polygon'
@@ -25,26 +33,49 @@ const feature = id => {
   return TS.write(bounds)
 }
 
-const place = id => {
-  const item = storage.getItem(id)
+
+/**
+ *
+ */
+const place = async id => {
+  const item = await level.value(id)
   return readGeometry(item.geojson)
 }
 
-const group = id => {
-  const item = storage.getItem(id)
-  const geometries = searchIndex(item.terms)
+
+/**
+ *
+ */
+const group = async id => {
+  const item = await level.value(id)
+
+  const items = (await Promise.all(searchIndex(item.terms)
     .filter(({ ref }) => !isGroup(ref) && !isSymbol(ref))
     .map(({ ref }) => ref)
     .filter(id => isLayer(id) || isFeature(id) || isPlace(id))
-    .flatMap(id => isLayer(id) ? getContainedFeatures(id) : storage.getItem(id))
-    .map(item => isPlace(item.id) ? readGeometry(item.geojson) : readFeature(item).getGeometry())
+    .flatMap(id => isLayer(id)
+      ? level.values(`feature:${id.split(':')[1]}`)
+      : level.value(id)
+    )
+  )).flat()
+
+  const extractGeometry = item => isPlace(item.id)
+    ? readGeometry(item.geojson)
+    : readFeature(item).getGeometry()
+
+  const geometries = items.map(extractGeometry)
+    .filter(R.identity)
     .map(TS.read)
+
   const collection = TS.collect(geometries)
   return collection.getNumGeometries()
     ? TS.write(TS.minimumRectangle(collection))
     : null
 }
 
+/**
+ *
+ */
 export default R.cond([
   [isLayer, layer],
   [isFeature, feature],

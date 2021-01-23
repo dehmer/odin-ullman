@@ -10,7 +10,7 @@ import { defaults as defaultInteractions } from 'ol/interaction'
 import { highlightedFeatures } from '../storage/action'
 import './epsg'
 import style from './style'
-import { storage } from '../storage'
+import * as level from '../storage/level'
 import select from './interaction/select'
 import boxselect from './interaction/boxselect'
 import translate from './interaction/translate'
@@ -24,12 +24,12 @@ import emitter from '../emitter'
  *
  */
 export const Map = () => {
-  React.useEffect(() => {
+  React.useEffect(async () => {
     const target = 'map'
     const controls = [new Rotate()]
 
-    const viewOptions = storage.getItem('session:map.view') || {
-      center: [2650758.3877764223, 8019983.4523651665],
+    const viewOptions = await level.value('session:map.view') || {
+      center: [1823376.75753279, 6143598.472197734], // Vienna
       resolution: 612,
       rotation: 0
     }
@@ -85,13 +85,12 @@ export const Map = () => {
     map.addInteraction(modify(selectInteraction.getFeatures()))
 
     view.on('change', ({ target: view }) => {
-      // TODO: throttle
-      storage.setItem({
+      level.put({
         id: 'session:map.view',
         center: view.getCenter(),
         resolution: view.getResolution(),
         rotation: view.getRotation()
-      }, true)
+      }, { quiet: true })
     })
 
     emitter.on('map/panto', ({ center, resolution }) => view.animate({ center, resolution }))
@@ -100,6 +99,15 @@ export const Map = () => {
       const selectionCount = selectedSource.getFeatures().length
       deselectedLayer.setOpacity(selectionCount ? 0.35 : 1)
     })
+
+    emitter.on('project/open', async () => {
+      const options = await level.value('session:map.view')
+      if (!options) return
+      view.setCenter(options.center)
+      view.setResolution(options.resolution)
+      view.setRotation(options.rotation)
+    })
+
   }, [])
 
   return <div

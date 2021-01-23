@@ -56,7 +56,8 @@ const rendererConfig = (env, argv) => ({
 
   plugins: [
     new HtmlWebpackPlugin({ title: 'ODIN - C2IS' }),
-    new webpack.IgnorePlugin(/^pg-native$/)
+    new webpack.IgnorePlugin(/^pg-native$/),
+    new webpack.ExternalsPlugin("commonjs", ['leveldown'])
   ],
 
   externals: {

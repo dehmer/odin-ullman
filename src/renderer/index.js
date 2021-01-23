@@ -8,63 +8,23 @@ import './storage/command'
 import './storage/action'
 import emitter from './emitter'
 
-Mousetrap.bind('command+1', () => {
-  emitter.emit('search/scope/all')
-  return false
-})
+const bindings = [
+  ['command+1', () => emitter.emit('search/scope/all')],
+  ['command+2', () => emitter.emit('search/scope/layer')],
+  ['command+3', () => emitter.emit('search/scope/feature')],
+  ['command+4', () => emitter.emit('search/scope/link')],
+  ['command+5', () => emitter.emit('search/scope/group')],
+  ['command+6', () => emitter.emit('search/scope/symbol')],
+  ['command+7', () => emitter.emit('search/scope/place')],
+  ['command+8', () => emitter.emit('search/scope/project')],
+  ['f1', () => emitter.emit('storage/bookmark')],
+  ['f2', () => emitter.emit('storage/group')],
+  ['f3', () => emitter.emit('storage/snapshot')],
+  ['f4', () => emitter.emit('storage/layer')],
+  ['f5', () => emitter.emit('storage/project')]
+]
 
-Mousetrap.bind('command+2', () => {
-  emitter.emit('search/scope/layer')
-  return false
-})
-
-Mousetrap.bind('command+3', () => {
-  emitter.emit('search/scope/feature')
-  return false
-})
-
-Mousetrap.bind('command+4', () => {
-  emitter.emit('search/scope/link')
-  return false
-})
-
-Mousetrap.bind('command+5', () => {
-  emitter.emit('search/scope/group')
-  return false
-})
-
-Mousetrap.bind('command+6', () => {
-  emitter.emit('search/scope/symbol')
-  return false
-})
-
-Mousetrap.bind('command+7', () => {
-  emitter.emit('search/scope/place')
-  return false
-})
-
-Mousetrap.bind('f1', () => {
-  emitter.emit('storage/bookmark')
-  return false
-})
-
-Mousetrap.bind('f2', () => {
-  emitter.emit('storage/group')
-  return false
-})
-
-Mousetrap.bind('f3', () => {
-  emitter.emit('storage/snapshot')
-  return false
-})
-
-/**
- * Create layer from last search.
- */
-Mousetrap.bind('f4', () => {
-  emitter.emit('storage/layer')
-  return false
-})
+bindings.forEach(([key, fn]) => Mousetrap.bind(key, fn))
 
 const app = document.createElement('div')
 document.body.appendChild(app)
