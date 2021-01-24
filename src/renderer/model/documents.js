@@ -1,7 +1,5 @@
 import * as R from 'ramda'
-import { hierarchy, dimensions, scopes } from './symbols'
 import { layerId } from '../storage/ids'
-import { identity } from './sidc'
 
 export const documents = {}
 
@@ -12,23 +10,23 @@ export const documents = {}
  */
 documents.feature = (feature, cache = []) => {
   const layer = cache[layerId(feature.id)]
-  const { t, sidc } = feature.properties
+  const { t } = feature.properties
   const links = feature.links || []
 
   const tags = ({ hidden, tags }) => [
     hidden ? 'hidden' : 'visible',
     ...(links.length ? ['link'] : []),
     ...(tags || []),
-    ...dimensions(sidc),
-    ...scopes(sidc),
-    ...identity(sidc)
+    ...feature.dimensions,
+    ...feature.scope,
+    ...feature.identity
   ]
 
   return {
     id: feature.id,
     scope: 'feature',
     tags: tags(feature),
-    text: `${t} ${hierarchy(sidc).join(' ')} ${layer.name}`
+    text: `${t} ${feature.hierarchy.join(' ')} ${layer.name}`
   }
 }
 
@@ -70,11 +68,9 @@ documents.layer = layer => {
  *
  */
 documents.symbol = symbol => {
-  const { dimension, scope } = symbol
-
   const tags = [
-    ...dimension ? dimension.split(', ') : [],
-    ...scope ? scope.split(', ') : [],
+    ...symbol.dimensions,
+    ...symbol.scope,
     ...(symbol.tags || [])
   ]
 

@@ -5,8 +5,11 @@ import * as level from '../storage/level'
 
 const id = descriptor => `symbol:${descriptor.sidc.substring(0, 10)}`
 
-const descriptors = json.reduce((acc, descriptor) => {
-  acc[normalize(descriptor.sidc)] = descriptor
+const symbols = json.reduce((acc, symbol) => {
+  symbol.dimensions = symbol.dimension ? symbol.dimension.split(', ') : []
+  symbol.scope = symbol.scope ? [symbol.scope] : []
+  delete symbol.dimension
+  acc[normalize(symbol.sidc)] = symbol
   return acc
 }, {})
 
@@ -14,7 +17,7 @@ const descriptors = json.reduce((acc, descriptor) => {
   if (await level.exists('symbol:')) return
 
   // Populate storage with symbols if missing:
-  level.batch(json.map(symbol => {
+  level.batch(Object.values(symbols).map(symbol => {
     symbol.id = id(symbol)
     return { type: 'put', key: symbol.id, value: symbol }
   }))
@@ -22,26 +25,20 @@ const descriptors = json.reduce((acc, descriptor) => {
 
 export const hierarchy = sidc => {
   if (!sidc) return ['N/A']
-  const descriptor = descriptors[normalize(sidc)]
+  const descriptor = symbols[normalize(sidc)]
   return descriptor ? descriptor.hierarchy : ['N/A']
 }
 
 export const dimensions = sidc => {
   if (!sidc) return []
-  const descriptor = descriptors[normalize(sidc)]
-  if (!descriptor) return []
-  return descriptor.dimension
-    ? descriptor.dimension.split(', ')
-    : []
+  const symbol = symbols[normalize(sidc)]
+  return symbol ? symbol.dimensions : []
 }
 
-export const scopes = sidc => {
+export const scope = sidc => {
   if (!sidc) return []
-  const descriptor = descriptors[normalize(sidc)]
-  if (!descriptor) return []
-  return descriptor.scope
-    ? [descriptor.scope]
-    : []
+  const symbol = symbols[normalize(sidc)]
+  return symbol ? symbol.scope : []
 }
 
 const placeholderSymbol = new ms.Symbol('')
@@ -64,7 +61,7 @@ export const layout = feature => {
   if (!feature) return
   if (!feature.get('sidc')) return
   const sidc = feature.get('sidc')
-  const descriptor = descriptors[normalize(sidc)]
+  const descriptor = symbols[normalize(sidc)]
   return descriptor
     ? descriptor.parameters && descriptor.parameters.layout
       ? `${descriptor.geometry}-${descriptor.parameters.layout}`
@@ -73,7 +70,7 @@ export const layout = feature => {
 }
 
 export const maxPoints = sidc => {
-  const descriptor = descriptors[normalize(sidc)]
+  const descriptor = symbols[normalize(sidc)]
   return descriptor
     ? descriptor.parameters && descriptor.parameters.maxPoints
     : undefined

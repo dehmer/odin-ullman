@@ -12,6 +12,9 @@ import { writeGeometryObject, writeFeatureObject } from './format'
 import selection from '../selection'
 import { currentDateTime, toMilitaryTime } from '../model/datetime'
 import './command-tag'
+import { hierarchy, dimensions, scope } from '../model/symbols'
+import { identity } from '../model/sidc'
+
 
 // -> command handlers
 
@@ -39,7 +42,16 @@ emitter.on('layers/import', async ({ layers }) => {
     acc.push({ type: 'put', key: layer.id, value: layer })
 
     const ops = features
-      .map(R.tap(feature => feature.id = featureId(layer.id)))
+      .map(R.tap(feature => {
+        feature.id = featureId(layer.id)
+        const sidc = feature.properties.sidc
+        if (sidc) {
+          feature.scope = scope(sidc),
+          feature.dimensions = dimensions(sidc),
+          feature.hierarchy = hierarchy(sidc)
+          feature.identity = identity(sidc)
+        }
+      }))
       .map(value => ({ type: 'put', key: value.id, value }))
 
     acc.push(...ops)
@@ -68,7 +80,7 @@ const contained = async (accp, id) => {
   } else return acc
 }
 
-emitter.on(':id(.*)/show', async ({ id }) => {
+emitter.on(':id(.+:.*)/show', async ({ id }) => {
   const ids = R.uniq([id, ...selection.selected()])
   const ops = (await ids.reduce(contained, []))
     .map(R.tap(item => delete item.hidden))
@@ -77,7 +89,7 @@ emitter.on(':id(.*)/show', async ({ id }) => {
   level.batch(ops)
 })
 
-emitter.on(':id(.*)/hide', async ({ id }) => {
+emitter.on(':id(.+:.*)/hide', async ({ id }) => {
   const ids = R.uniq([id, ...selection.selected()])
   const ops = (await ids.reduce(contained, []))
     .map(R.tap(item => (item.hidden = true)))

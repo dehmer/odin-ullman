@@ -1,9 +1,8 @@
 import * as R from 'ramda'
 import * as level from '../storage/level'
-import { hierarchy, url, dimensions, scopes } from './symbols'
+import { url } from './symbols'
 import { searchIndex } from '../search/lunr'
 import { layerId } from '../storage/ids'
-import { identity } from './sidc'
 
 
 export const options = {}
@@ -18,20 +17,23 @@ options.feature = async feature => {
     return options.feature(await level.value(feature))
   }
 
-  const tags = ({ hidden, tags, links }, sidc) => [
-    'SCOPE:FEATURE:identify',
-    ...((links || []).length ? ['IMAGE:LINKS:links:mdiLink'] : []),
-    hidden ? 'SYSTEM:HIDDEN:show' : 'SYSTEM:VISIBLE:hide',
-    ...dimensions(sidc).map(label => `SYSTEM:${label}:NONE`),
-    ...scopes(sidc).map(label => `SYSTEM:${label}:NONE`),
-    ...(identity(sidc)).map(label => `SYSTEM:${label}:NONE`),
-    ...(tags || []).map(label => `USER:${label}:NONE`)
-  ].join(' ')
+  const tags = (feature, sidc) => {
+
+    return [
+      'SCOPE:FEATURE:identify',
+      ...((feature.links || []).length ? ['IMAGE:LINKS:links:mdiLink'] : []),
+      feature.hidden ? 'SYSTEM:HIDDEN:show' : 'SYSTEM:VISIBLE:hide',
+      ...feature.dimensions.map(label => `SYSTEM:${label}:NONE`),
+      ...feature.scope.map(label => `SYSTEM:${label}:NONE`),
+      ...feature.identity.map(label => `SYSTEM:${label}:NONE`),
+      ...(feature.tags || []).map(label => `USER:${label}:NONE`)
+    ].join(' ')
+  }
 
   const layer = await level.value(layerId(feature.id))
   const { properties } = feature
   const { sidc, t } = properties
-  const description = layer.name.toUpperCase() + ' ⏤ ' + hierarchy(sidc).join(' • ')
+  const description = layer.name.toUpperCase() + ' ⏤ ' + feature.hierarchy.join(' • ')
 
   return {
     id: feature.id,
@@ -106,18 +108,17 @@ options.layer = async layer => {
  * symbol:
  */
 options.symbol = async symbol => {
-  // console.log('[symbol]', symbol)
   if (typeof symbol === 'string') {
     return options.symbol(await level.value(symbol))
   }
 
   const replace = (s, i, r) => s.substring(0, i) + r + s.substring(i + r.length)
 
-  const tags = ({ sidc, tags }) => [
+  const tags = symbol => [
     'SCOPE:SYMBOL:NONE',
-    ...dimensions(sidc).map(label => `SYSTEM:${label}:NONE`),
-    ...scopes(sidc).map(label => `SYSTEM:${label}:NONE`),
-    ...(tags || []).map(label => `USER:${label}:NONE`)
+    ...symbol.dimensions.map(label => `SYSTEM:${label}:NONE`),
+    ...symbol.scope.map(label => `SYSTEM:${label}:NONE`),
+    ...(symbol.tags || []).map(label => `USER:${label}:NONE`)
   ].join(' ')
 
   return {
