@@ -4,7 +4,7 @@
   "main": "dist/main.js",
   "scripts": {
     "start": "electron . --noDevServer",
-    "hot": "webpack-dev-server --hot --inline",
+    "hot": "webpack serve",
     "webpack": "webpack",
     "webpack:production": "webpack --mode='production'",
     "builder": "electron-builder --publish=never -mlw",
@@ -47,8 +47,10 @@
     "webpack-dev-server": "^3.11.0"
   },
   "dependencies": {
+    "@material-ui/core": "^4.11.3",
     "@mdi/js": "^5.8.55",
     "@mdi/react": "^1.4.0",
+    "fontsource-roboto": "^4.0.0",
     "geodesy": "^2.2.1",
     "js-cache": "^1.0.3",
     "jsts": "^2.6.1",

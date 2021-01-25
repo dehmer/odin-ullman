@@ -6,6 +6,7 @@ import { App } from './components/App'
 import { loadLayerFiles } from './model/io'
 import './storage/command'
 import './storage/action'
+import './model/properties'
 import emitter from './emitter'
 
 const bindings = [
@@ -21,7 +22,8 @@ const bindings = [
   ['f2', () => emitter.emit('storage/group')],
   ['f3', () => emitter.emit('storage/snapshot')],
   ['f4', () => emitter.emit('storage/layer')],
-  ['f5', () => emitter.emit('storage/project')]
+  ['f5', () => emitter.emit('storage/project')],
+  ['command+,', () => emitter.emit('properties/show')]
 ]
 
 bindings.forEach(([key, fn]) => Mousetrap.bind(key, fn))

@@ -5,7 +5,7 @@ import DateTime from 'luxon/src/datetime'
 import * as level from './level'
 import { layerId, featureId } from './ids'
 import { isLayer, isFeature, isGroup, isSymbol, isPlace, isLink } from './ids'
-import { FEATURE_ID, LAYER_ID, PLACE_ID, GROUP_ID, PROJECT_ID } from './ids'
+import { FEATURE_ID, LAYER_ID, PLACE_ID, GROUP_ID, PROJECT_ID, FIELD_ID } from './ids'
 import emitter from '../emitter'
 import { searchIndex } from '../search/lunr'
 import { writeGeometryObject, writeFeatureObject } from './format'
@@ -323,7 +323,19 @@ emitter.on('storage/features/add', async ({ feature }) => {
 
   const layer = await defaultLayer()
   if (!layer) return
-  const item = writeFeatureObject(feature)
+
+  const sidc = feature.get('sidc')
+  const item = {
+    ...writeFeatureObject(feature),
+    scope: scope(sidc),
+    dimensions: dimensions(sidc),
+    hierarchy: hierarchy(sidc),
+    identity: identity(sidc)
+  }
+
+  console.log(item)
+
+
   item.id = featureId(layer.id)
   ops.push({ type: 'put', key: item.id, value: item })
   level.batch(ops)
@@ -419,6 +431,24 @@ emitter.on('storage/project', () => {
   level.put(project)
   emitter.emit('search/scope/project')
   selection.set([project.id])
+})
+
+emitter.on(`:id(${FIELD_ID})/update`, async ({ ids, property, value }) => {
+  const updateValue = (property, item) => {
+    const replace = (s, i, c) => s.substring(0, i) + c + s.substring(i + 1)
+    if (Array.isArray(property)) {
+      item.properties[property[0]] = replace(item.properties[property[0]], property[1], value)
+    } else item.properties[property] = value
+  }
+
+  const items = await level.values(ids)
+  const ops = items.reduce((acc, item) => {
+    updateValue(property, item)
+    acc.push({ type: 'put', key: item.id, value: item })
+    return acc
+  }, [])
+
+  level.batch(ops)
 })
 
 // <- command handlers

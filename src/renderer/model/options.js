@@ -17,15 +17,18 @@ options.feature = async feature => {
     return options.feature(await level.value(feature))
   }
 
-  const tags = (feature, sidc) => {
+  const tags = feature => {
+    const dimensions = feature.dimensions || []
+    const scope = feature.scope || []
+    const identity = feature.identity || []
 
     return [
       'SCOPE:FEATURE:identify',
       ...((feature.links || []).length ? ['IMAGE:LINKS:links:mdiLink'] : []),
       feature.hidden ? 'SYSTEM:HIDDEN:show' : 'SYSTEM:VISIBLE:hide',
-      ...feature.dimensions.map(label => `SYSTEM:${label}:NONE`),
-      ...feature.scope.map(label => `SYSTEM:${label}:NONE`),
-      ...feature.identity.map(label => `SYSTEM:${label}:NONE`),
+      ...dimensions.map(label => `SYSTEM:${label}:NONE`),
+      ...scope.map(label => `SYSTEM:${label}:NONE`),
+      ...identity.map(label => `SYSTEM:${label}:NONE`),
       ...(feature.tags || []).map(label => `USER:${label}:NONE`)
     ].join(' ')
   }
@@ -33,7 +36,8 @@ options.feature = async feature => {
   const layer = await level.value(layerId(feature.id))
   const { properties } = feature
   const { sidc, t } = properties
-  const description = layer.name.toUpperCase() + ' ⏤ ' + feature.hierarchy.join(' • ')
+  const hierarchy = feature.hierarchy || ['N/A']
+  const description = layer.name.toUpperCase() + ' ⏤ ' + hierarchy.join(' • ')
 
   return {
     id: feature.id,

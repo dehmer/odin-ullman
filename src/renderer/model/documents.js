@@ -17,16 +17,16 @@ documents.feature = (feature, cache = []) => {
     hidden ? 'hidden' : 'visible',
     ...(links.length ? ['link'] : []),
     ...(tags || []),
-    ...feature.dimensions,
-    ...feature.scope,
-    ...feature.identity
+    ...(feature.dimensions || []),
+    ...(feature.scope || []),
+    ...(feature.identity || [])
   ]
 
   return {
     id: feature.id,
     scope: 'feature',
     tags: tags(feature),
-    text: `${t} ${feature.hierarchy.join(' ')} ${layer.name}`
+    text: `${t} ${(feature.hierarchy || []).join(' ')} ${layer.name}`
   }
 }
 
