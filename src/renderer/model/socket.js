@@ -25,6 +25,31 @@ const socket = (id, url) => {
   const hidden = {}
   var socket
 
+  const handlePut = (json) => {
+    const items = json.type === 'Feature'
+      ? [json]
+      : json.features
+
+    items.forEach(async item => {
+      const mergedItem = { ...(await level.getItem(item.id)), ...item }
+      level.setItem(mergedItem, true)
+      const stale = featureById(item.id)
+      if (stale) source.removeFeature(stale)
+      if (!hidden[item.id]) addItem(mergedItem)
+    })
+  }
+
+  const handleDelete = (id) => {
+    const ids = [id]
+    if (hidden[id] || featureById(id)) emitter.emit('items/remove', { ids })
+  }
+  const handleHide = (id) => {
+    hidden[id] = true
+  }
+  const handleShow = (id) => {
+    delete hidden[id]
+  }
+
   try {
     socket = new WebSocket(url)
     socket.onopen = () => socket.send(JSON.stringify({ id, type: 'resume' }))
@@ -33,17 +58,15 @@ const socket = (id, url) => {
 
     socket.onmessage = ({ data }) => {
       const json = JSON.parse(data)
+      const items = Array.isArray(json) ? json : [json]
 
-      const items = json.type === 'Feature'
-        ? [json]
-        : json.features
-
-      items.forEach(async item => {
-        const mergedItem = { ...(await level.getItem(item.id)), ...item}
-        level.setItem(mergedItem, true)
-        const stale = featureById(item.id)
-        if (stale) source.removeFeature(stale)
-        if (!hidden[item.id]) addItem(mergedItem)
+      items.forEach(order => {
+        switch (order.type) {
+          case 'put': return handlePut(order.value)
+          case 'del': return handleDelete(order.key)
+          case 'hide': return handleHide(order.key)
+          case 'show': return handleShow(order.key)
+        }
       })
     }
   } catch (err) {
