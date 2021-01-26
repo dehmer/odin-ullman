@@ -28,8 +28,8 @@ export const Map = () => {
     const target = 'map'
     const controls = [new Rotate()]
 
-    const viewOptions = await level.getItem('session:map.view') || {
-      center: [2650758.3877764223, 8019983.4523651665],
+    const viewOptions = await level.value('session:map.view') || {
+      center: [1823376.75753279, 6143598.472197734], // Vienna
       resolution: 612,
       rotation: 0
     }
@@ -88,13 +88,12 @@ export const Map = () => {
     map.addInteraction(modify(selectInteraction.getFeatures()))
 
     view.on('change', ({ target: view }) => {
-      // TODO: throttle
-      level.setItem({
+      level.put({
         id: 'session:map.view',
         center: view.getCenter(),
         resolution: view.getResolution(),
         rotation: view.getRotation()
-      }, true)
+      }, { quiet: true })
     })
 
     emitter.on('map/panto', ({ center, resolution, rotation }) => view.animate({
@@ -108,6 +107,15 @@ export const Map = () => {
       const selectionCount = selectedSource.getFeatures().length
       deselectedLayer.setOpacity(selectionCount ? 0.35 : 1)
     })
+
+    emitter.on('project/open', async () => {
+      const options = await level.value('session:map.view')
+      if (!options) return
+      view.setCenter(options.center)
+      view.setResolution(options.resolution)
+      view.setRotation(options.rotation)
+    })
+
   }, [])
 
   return <div

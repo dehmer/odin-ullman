@@ -1,0 +1,130 @@
+{
+  "fields": [
+    {
+      "id": "field:7884019e-1a39-47ea-a49e-6ec4409aae09",
+      "label": "Echelon",
+      "property": ["sidc", 11],
+      "type": "select",
+      "options": [
+        ["N/A", "-"],
+        ["Team/Crew", "A"],
+        ["Squad", "B"],
+        ["Section", "C"],
+        ["Platoon", "D"],
+        ["Company", "E"],
+        ["Battalion", "F"],
+        ["Regiment/Group", "G"],
+        ["Brigade", "H"],
+        ["Division", "I"],
+        ["Corps", "J"],
+        ["Army", "K"],
+        ["Front", "L"],
+        ["Region", "M"],
+        ["Command", "N"]
+      ]
+    },
+    {
+      "id": "field:996da414-0d3e-47fa-b152-ba5897c9c05a",
+      "property": ["sidc", 1],
+      "type": "identity"
+    },
+    {
+      "id": "field:738a5729-3fc8-4c3a-9686-2aa1964a8831",
+      "label": "Additional Information",
+      "placeholder": "Additional Information",
+      "property": "h",
+      "type": "text"
+    },
+    {
+      "id": "field:c96a5722-a5c9-4412-868e-94b731713b8a",
+      "label": "Unique Designation",
+      "placeholder": "Unique Designation",
+      "property": "t",
+      "type": "text"
+    },
+    {
+      "id": "field:1d75ae52-7ea0-48a5-b461-335839def1b4",
+      "label": "Unique Designation (Left)",
+      "placeholder": "Unique Designation (Left)",
+      "property": "t",
+      "type": "text"
+    },
+    {
+      "id": "field:5a0902df-7dd1-4fea-8e0f-f54312bc5e2e",
+      "label": "Unique Designation (Right)",
+      "placeholder": "Unique Designation (Right)",
+      "property": "t1",
+      "type": "text"
+    },
+    {
+      "id": "field:112bd4d2-ada5-4b4b-94f3-95bd22418e3a",
+      "label": "Higher Formation",
+      "placeholder": "Higher Formation",
+      "property": "m",
+      "type": "text"
+    },
+    {
+      "id": "field:fb7bc60f-d403-456e-9bbf-4036a7883d22",
+      "label": "Date-Time Group",
+      "placeholder": "Date-Time Group",
+      "property": "w",
+      "type": "text"
+    },
+    {
+      "id": "field:93141668-18cf-4ad9-ac92-ae68b8ef4fd3",
+      "label": "Effective (from)",
+      "placeholder": "Effective (from)",
+      "property": "w",
+      "type": "text"
+    },
+    {
+      "id": "field:6c8c45d8-5ce6-4341-8e69-3012a65b02c8",
+      "label": "Effective (to)",
+      "placeholder": "Effective (to)",
+      "property": "w1",
+      "type": "text"
+    },
+    {
+      "id": "field:81aedcbd-9154-4d0d-8d32-9aec44b22f28",
+      "label": "Staff Comment",
+      "placeholder": "Staff Comment",
+      "property": "g",
+      "type": "text"
+    }
+  ],
+
+  "selectors": [
+    {
+      "id": "form:b6387ad4-9f38-43c4-b116-577ab458e3e6",
+      "selector": "scope ~= unit",
+      "fields": [
+        "field:c96a5722-a5c9-4412-868e-94b731713b8a",
+        "field:112bd4d2-ada5-4b4b-94f3-95bd22418e3a",
+        "field:7884019e-1a39-47ea-a49e-6ec4409aae09",
+        "field:996da414-0d3e-47fa-b152-ba5897c9c05a",
+        "field:738a5729-3fc8-4c3a-9686-2aa1964a8831",
+        "field:fb7bc60f-d403-456e-9bbf-4036a7883d22",
+        "field:81aedcbd-9154-4d0d-8d32-9aec44b22f28"
+      ]
+    },
+    {
+      "id": "form:b1f85f06-1dd6-40ff-87f7-524cbb7c7450",
+      "selector": "scope ~= equipment",
+      "fields": [
+        "field:c96a5722-a5c9-4412-868e-94b731713b8a",
+        "field:fb7bc60f-d403-456e-9bbf-4036a7883d22",
+        "field:81aedcbd-9154-4d0d-8d32-9aec44b22f28"
+      ]
+    },
+    {
+      "id": "form:3a88c0ca-c4a2-4c33-a108-0c749c5d6dd2",
+      "selector": "hierarchy ~= boundaries",
+      "fields": [
+        "field:1d75ae52-7ea0-48a5-b461-335839def1b4",
+        "field:5a0902df-7dd1-4fea-8e0f-f54312bc5e2e",
+        "field:93141668-18cf-4ad9-ac92-ae68b8ef4fd3",
+        "field:6c8c45d8-5ce6-4341-8e69-3012a65b02c8"
+      ]
+    }
+  ]
+}

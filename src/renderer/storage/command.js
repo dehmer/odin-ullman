@@ -5,13 +5,16 @@ import DateTime from 'luxon/src/datetime'
 import * as level from './level'
 import { layerId, featureId } from './ids'
 import { isLayer, isFeature, isGroup, isSymbol, isPlace, isLink } from './ids'
-import { FEATURE_ID, LAYER_ID, PLACE_ID, GROUP_ID } from './ids'
+import { FEATURE_ID, LAYER_ID, PLACE_ID, GROUP_ID, PROJECT_ID, FIELD_ID } from './ids'
 import emitter from '../emitter'
 import { searchIndex } from '../search/lunr'
 import { writeGeometryObject, writeFeatureObject } from './format'
 import selection from '../selection'
 import { currentDateTime, toMilitaryTime } from '../model/datetime'
 import './command-tag'
+import { hierarchy, dimensions, scope } from '../model/symbols'
+import { identity } from '../model/sidc'
+
 
 // -> command handlers
 
@@ -19,7 +22,7 @@ emitter.on('layers/import', async ({ layers }) => {
 
   // Overwrite existing layers, i.e. delete before re-adding.
   const names = layers.map(R.prop('name'))
-  const loaded = await level.getItems('layer:')
+  const loaded = await level.values('layer:')
   const removals = loaded.filter(layer => names.includes(layer.name))
 
   const ops = await removals.reduce(async (accp, layer) => {
@@ -39,7 +42,16 @@ emitter.on('layers/import', async ({ layers }) => {
     acc.push({ type: 'put', key: layer.id, value: layer })
 
     const ops = features
-      .map(R.tap(feature => feature.id = featureId(layer.id)))
+      .map(R.tap(feature => {
+        feature.id = featureId(layer.id)
+        const sidc = feature.properties.sidc
+        if (sidc) {
+          feature.scope = scope(sidc),
+          feature.dimensions = dimensions(sidc),
+          feature.hierarchy = hierarchy(sidc)
+          feature.identity = identity(sidc)
+        }
+      }))
       .map(value => ({ type: 'put', key: value.id, value }))
 
     acc.push(...ops)
@@ -53,22 +65,22 @@ const contained = async (accp, id) => {
   const acc = await accp
 
   if (isFeature(id)) {
-    const item = await level.getItem(id)
+    const item = await level.value(id)
     return acc.concat(item)
   } else if (isGroup(id)) {
-    const item = await level.getItem(id)
+    const item = await level.value(id)
     const ids = searchIndex(item.terms)
       .filter(({ ref }) => !isGroup(ref) && !isSymbol(ref))
       .map(({ ref }) => ref)
     return ids.reduce(contained, acc)
   } else if (isLayer(id)) {
-    acc.push(await level.getItem(id))
+    acc.push(await level.value(id))
     const ids = await level.keys(`feature:${id.split(':')[1]}`)
     return ids.reduce(contained, acc)
   } else return acc
 }
 
-emitter.on(':id(.*)/show', async ({ id }) => {
+emitter.on(':id(.+:.*)/show', async ({ id }) => {
   const ids = R.uniq([id, ...selection.selected()])
   const ops = (await ids.reduce(contained, []))
     .map(R.tap(item => delete item.hidden))
@@ -77,7 +89,7 @@ emitter.on(':id(.*)/show', async ({ id }) => {
   level.batch(ops)
 })
 
-emitter.on(':id(.*)/hide', async ({ id }) => {
+emitter.on(':id(.+:.*)/hide', async ({ id }) => {
   const ids = R.uniq([id, ...selection.selected()])
   const ops = (await ids.reduce(contained, []))
     .map(R.tap(item => (item.hidden = true)))
@@ -87,34 +99,35 @@ emitter.on(':id(.*)/hide', async ({ id }) => {
 })
 
 emitter.on(`:id(${LAYER_ID})/suspend`, async ({ id }) => {
-  const socket = await level.getItem(id)
+  const socket = await level.value(id)
   socket.active = false
-  level.setItem(socket)
+  level.put(socket)
 })
 
 emitter.on(`:id(${LAYER_ID})/resume`, async ({ id }) => {
-  const socket = await level.getItem(id)
+  const socket = await level.value(id)
   socket.active = true
-  level.setItem(socket)
+  level.put(socket)
 })
 
 const rename = async ({ id, name }) => {
-  const item = await level.getItem(id)
+  const item = await level.value(id)
   item.name = name.trim()
-  level.setItem(item)
+  level.put(item)
 }
 
 emitter.on(`:id(${LAYER_ID})/rename`, rename)
 emitter.on(`:id(${GROUP_ID})/rename`, rename)
+emitter.on(`:id(${PROJECT_ID})/rename`, rename)
 
 
 /**
  *
  */
 emitter.on(`:id(${FEATURE_ID})/rename`, async ({ id, name }) => {
-  const feature = await level.getItem(id)
+  const feature = await level.value(id)
   feature.properties.t = name.trim()
-  level.setItem(feature)
+  level.put(feature)
 })
 
 
@@ -122,10 +135,10 @@ emitter.on(`:id(${FEATURE_ID})/rename`, async ({ id, name }) => {
  *
  */
 emitter.on(`:id(${PLACE_ID})/rename`, async ({ id, name }) => {
-  const place = await level.getItem(id)
+  const place = await level.value(id)
   place.name = name.trim()
   place.sticky = true
-  level.setItem(place)
+  level.put(place)
 })
 
 
@@ -137,7 +150,7 @@ emitter.on('items/remove', async ({ ids }) => {
 
   const loadItems = async (ids, acc) => {
     if (!ids) return acc
-    const ps = ids.filter(id => !acc[id]).map(level.getItem)
+    const ps = ids.filter(id => !acc[id]).map(level.value)
     const items = await Promise.all(ps)
 
     return items.reduce(async (pacc, item) => {
@@ -190,7 +203,7 @@ emitter.on('items/remove', async ({ ids }) => {
  *
  */
 emitter.on('storage/group', async () => {
-  const search = await level.getItem('search:')
+  const search = await level.value('search:')
   if (!search) return
   const { terms } = search
 
@@ -218,7 +231,7 @@ emitter.on('storage/group', async () => {
  *
  */
 emitter.on('storage/bookmark', async () => {
-  const view = await level.getItem('session:map.view')
+  const view = await level.value('session:map.view')
   if (!view) return
 
   const point = new geom.Point(view.center)
@@ -251,7 +264,7 @@ emitter.on('storage/socket', () => {
     active: true
   }
 
-  level.setItem(layer)
+  level.put(layer)
   emitter.emit('search/scope/layer')
   selection.set([layer.id])
 })
@@ -261,7 +274,7 @@ emitter.on('storage/socket', () => {
  *
  */
 emitter.on('search/current', ({ terms }) => {
-  level.setItem({ id: 'search:', terms }, true)
+  level.put({ id: 'search:', terms }, { quiet: true, optional: true })
 })
 
 
@@ -269,7 +282,7 @@ emitter.on('search/current', ({ terms }) => {
  *
  */
 emitter.on(`:id(${FEATURE_ID})/links/add`, async ({ id, files }) => {
-  const feature = await level.getItem(id)
+  const feature = await level.value(id)
 
   const links = files.map(file => ({
     id: `link:${uuid()}`,
@@ -296,7 +309,7 @@ emitter.on(`:id(${FEATURE_ID})/links/add`, async ({ id, files }) => {
  *
  */
 emitter.on(`:id(${LAYER_ID})/links/add`, async ({ id, files }) => {
-  const layer = await level.getItem(id)
+  const layer = await level.value(id)
 
   const links = files.map(file => ({
     id: `link:${uuid()}`,
@@ -322,7 +335,8 @@ emitter.on('storage/features/add', async ({ feature }) => {
 
   const defaultLayer = async () => {
     const isDefault = layer => (layer.tags || []).includes('default')
-    const xs = await level.getItems('layer:', isDefault)
+    const xs = (await level.values('layer:')).filter(isDefault)
+
     if (xs.length) return xs[0]
     else {
       const layer = {
@@ -338,7 +352,16 @@ emitter.on('storage/features/add', async ({ feature }) => {
 
   const layer = await defaultLayer()
   if (!layer) return
-  const item = writeFeatureObject(feature)
+
+  const sidc = feature.get('sidc')
+  const item = {
+    ...writeFeatureObject(feature),
+    scope: scope(sidc),
+    dimensions: dimensions(sidc),
+    hierarchy: hierarchy(sidc),
+    identity: identity(sidc)
+  }
+
   item.id = featureId(layer.id)
   ops.push({ type: 'put', key: item.id, value: item })
   level.batch(ops)
@@ -350,7 +373,7 @@ emitter.on('storage/features/add', async ({ feature }) => {
  */
 emitter.on('features/geometry/update', async ({ geometries }) => {
   const ops = await Object.entries(geometries).reduce(async (acc, [id, geometry]) => {
-    const feature = await level.getItem(id)
+    const feature = await level.value(id)
     feature.geometry = writeGeometryObject(geometry)
     return (await acc).concat({ type: 'put', key: id, value: feature })
   }, [])
@@ -362,20 +385,107 @@ emitter.on('features/geometry/update', async ({ geometries }) => {
  *
  */
 emitter.on(`:id(${FEATURE_ID})/follow`, async ({ id }) => {
-  const feature = await level.getItem(id)
+  const feature = await level.value(id)
   if (feature.follow) {
     delete feature.follow
     const ops = [{ type: 'put', key: id, value: feature }]
     level.batch(ops)
   } else {
     feature.follow = true
-    const ops = (await level.getItems('feature:', feature => feature.follow))
+    const ops = (await level.value('feature:', feature => feature.follow))
       .map(R.tap(feature => delete feature.follow))
       .map(feature => ({ type: 'put', key: feature.id, value: feature }))
 
     ops.push({ type: 'put', key: id, value: feature })
     level.batch(ops)
   }
+})
+
+emitter.on('storage/layer', async () => {
+  const pid = layerId()
+  const item = await level.value('search:')
+  const ids = searchIndex(item.terms)
+    .filter(({ ref }) => !isGroup(ref) && !isSymbol(ref))
+    .map(({ ref }) => ref)
+
+  const items = await ids.reduce(async function reducer (accp, id) {
+    const acc = await accp
+    if (isLayer(id)) {
+      const featureIds = await level.keys(`feature:${id.split(':')[1]}`)
+      return featureIds.reduce(reducer, acc)
+    } else if (isPlace(id)) {
+      const place = await level.value(id)
+      return acc.concat({
+        type: 'Feature',
+        geometry: place.geojson,
+        properties: { t: place.name },
+        id: featureId(pid),
+        tags: place.tags
+      })
+    } else if (isFeature(id)) {
+      const feature = { ...(await level.value(id)), id: featureId(pid) }
+      return acc.concat(feature)
+    }
+    else return acc
+  }, [])
+
+  const layer = {
+    id: pid,
+    name: `Layer - ${currentDateTime()}`,
+    tags: R.uniq(items.flatMap(R.prop('tags'))).filter(R.identity)
+  }
+})
+
+/**
+ *
+ */
+emitter.on(`:id(${PROJECT_ID})/open`, async ({ id }) => {
+  const project = await level.value(id)
+  if (project.open) return
+
+  const isOpen = project => project.open
+  const projects = (await level.values('project:')).filter(isOpen)
+  const ops = projects.reduce((acc, project) => {
+    delete project.open
+    acc.push({ type: 'put', key: project.id, value: project })
+    return acc
+  }, [])
+
+  ops.push({ type: 'put', key: id, value: { ...project, open: true }})
+  level.batch(ops)
+})
+
+
+/**
+ *
+ */
+emitter.on('storage/project', () => {
+  const project = {
+    id: `project:${uuid()}`,
+    name: `Project - ${currentDateTime()}`
+  }
+
+  level.put(project)
+  emitter.emit('search/scope/project')
+  selection.set([project.id])
+})
+
+emitter.on(`:id(${FIELD_ID})/update`, async ({ ids, property, value }) => {
+  const updateValue = (property, item) => {
+    const replace = (s, i, c) => s.substring(0, i) + c + s.substring(i + 1)
+    if (Array.isArray(property)) {
+      item.properties[property[0]] = replace(item.properties[property[0]], property[1], value)
+    } else item.properties[property] = value
+  }
+
+  const items = await level.values(ids)
+  const ops = items.reduce((acc, item) => {
+    updateValue(property, item)
+    acc.push({ type: 'put', key: item.id, value: item })
+    return acc
+  }, [])
+
+  level.batch(ops)
 })
 
 // <- command handlers

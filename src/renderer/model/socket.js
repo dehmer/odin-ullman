@@ -31,8 +31,8 @@ const socket = (id, url) => {
       : json.features
 
     items.forEach(async item => {
-      const mergedItem = { ...(await level.getItem(item.id)), ...item }
-      level.setItem(mergedItem, true)
+      const mergedItem = { ...(await level.value(item.id)), ...item }
+      level.put(mergedItem, { quiet: true })
       const stale = featureById(item.id)
       if (stale) source.removeFeature(stale)
       if (!hidden[item.id]) addItem(mergedItem)
@@ -40,15 +40,11 @@ const socket = (id, url) => {
   }
 
   const handleDelete = (id) => {
-    const ids = [id]
-    if (hidden[id] || featureById(id)) emitter.emit('items/remove', { ids })
+    if (hidden[id] || featureById(id)) emitter.emit('items/remove', { ids: [id] })
   }
-  const handleHide = (id) => {
-    hidden[id] = true
-  }
-  const handleShow = (id) => {
-    delete hidden[id]
-  }
+
+  const handleHide = id => hidden[id] = true
+  const handleShow = id => delete hidden[id]
 
   try {
     socket = new WebSocket(url)
@@ -59,6 +55,7 @@ const socket = (id, url) => {
     socket.onmessage = ({ data }) => {
       const json = JSON.parse(data)
       const items = Array.isArray(json) ? json : [json]
+      console.log('received', items)
 
       items.forEach(order => {
         switch (order.type) {
@@ -101,7 +98,8 @@ const socket = (id, url) => {
 
 // Register sockets for socket layers (incl. retry):
 setInterval(async () => {
-  (await level.getItems('layer:', layer => layer.type === 'socket' && layer.active && !sockets[layer.id]))
+  (await level.values('layer:'))
+    .filter(layer => layer.type === 'socket' && layer.active && !sockets[layer.id])
     .forEach(layer => sockets[layer.id] = socket(layer.id, layer.url))
 }, 5000)
 
@@ -125,5 +123,6 @@ emitter.on(':id/socket/close', ({ id }) => {
 })
 
 emitter.on(':id/socket/error', ({ id, err }) => {
+  // console.error('[socket]', err)
   delete sockets[id]
 })

@@ -58,13 +58,7 @@ const rendererConfig = (env, argv) => ({
     new HtmlWebpackPlugin({ title: 'ODIN - C2IS' }),
     new webpack.IgnorePlugin(/^pg-native$/),
     new webpack.ExternalsPlugin("commonjs", ['leveldown'])
-  ],
-
-  externals: {
-    // necessary for bindings module to work correctly
-    // and resolve native module geos.node.
-    '@syncpoint/geosjs': 'commonjs @syncpoint/geosjs'
-  }
+  ]
 })
 
 const mainConfig = (env, argv) => ({

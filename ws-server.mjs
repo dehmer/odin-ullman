@@ -163,7 +163,8 @@ const signalBeam = function () {
       })
 
       const collection = { type: 'FeatureCollection', features }
-      this.send(JSON.stringify(collection))
+      const ops = [{ type: 'put', value: collection }]
+      this.send(JSON.stringify(ops))
       active && loop((bearing + 1) % 360)
     }, 50)
   }

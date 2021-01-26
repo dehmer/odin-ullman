@@ -99,6 +99,12 @@ div {
   padding: 0;
 }
 
+.property {
+  padding: 12px;
+  display: flex;
+  flex-direction: column; /* row (default) | row-reverse | column | column-reverse */
+}
+
 .card {
   padding: 12px;
   display: flex;

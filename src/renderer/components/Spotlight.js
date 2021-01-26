@@ -2,6 +2,7 @@ import * as R from 'ramda'
 import React from 'react'
 import { CardList } from './CardList'
 import Card from './Card'
+import Property from './Property'
 import { Search } from './Search'
 import { Scopebar } from './Scopebar'
 import emitter from '../emitter'
@@ -251,17 +252,23 @@ const Spotlight = () => {
     dispatch({ path: 'click', index, shiftKey, metaKey })
   }, [state])
 
-  const card = (props, index) => <Card
-    key={props.id}
-    ref={cardrefs[index]}
-    focus={state.focus === index}
-    onClick={event => handleClick(index, event)}
-    {...props}
-  />
+  const card = (props, index) => props.id.startsWith('field:')
+    ? <Property
+        key={props.id}
+        ref={cardrefs[index]}
+        focus={state.focus === index}
+        {...props}
+      />
+    : <Card
+        key={props.id}
+        ref={cardrefs[index]}
+        focus={state.focus === index}
+        onClick={event => handleClick(index, event)}
+        {...props}
+      />
 
   const handleKeyDown = event => {
     const { key, shiftKey, metaKey } = event
-    console.log(key)
     dispatch({ path: `keydown/${key}`, shiftKey, metaKey })
     if (key === 'Enter' && state.focus !== -1) ref.current.focus()
   }

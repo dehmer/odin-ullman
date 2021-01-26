@@ -39,24 +39,10 @@ const isVisible = feature => feature && !feature.hidden
 /**
  * Initial population.
  */
-;(async () => {
-  const features = await level.getItems('feature:', isVisible)
+emitter.on('project/open', async () => {
+  source.clear()
+  const features = (await level.values('feature:')).filter(isVisible)
   addFeatures(features.map(readFeature))
-})()
-
-
-
-/**
- *
- */
-emitter.on('storage/updated', changes => {
-  selection.deselect(changes.removal)
-  changes.removal.forEach(removeFeature)
-  changes.update.forEach(removeFeature)
-
-  // TODO: bulk - addFeatures()
-  changes.update.forEach(addFeature)
-  changes.addition.forEach(addFeature)
 })
 
 

@@ -1,7 +1,5 @@
 import * as R from 'ramda'
-import { hierarchy, dimensions, scopes } from './symbols'
 import { layerId } from '../storage/ids'
-import { identity } from './sidc'
 
 export const documents = {}
 
@@ -12,23 +10,23 @@ export const documents = {}
  */
 documents.feature = (feature, cache = []) => {
   const layer = cache[layerId(feature.id)]
-  const { t, sidc } = feature.properties
+  const { t } = feature.properties
   const links = feature.links || []
 
   const tags = ({ hidden, tags }) => [
     hidden ? 'hidden' : 'visible',
     ...(links.length ? ['link'] : []),
     ...(tags || []),
-    ...dimensions(sidc),
-    ...scopes(sidc),
-    ...identity(sidc)
+    ...(feature.dimensions || []),
+    ...(feature.scope || []),
+    ...(feature.identity || [])
   ]
 
   return {
     id: feature.id,
     scope: 'feature',
     tags: tags(feature),
-    text: `${t} ${hierarchy(sidc).join(' ')} ${layer ? layer.name : ''}`
+    text: `${t} ${(feature.hierarchy || []).join(' ')} ${layer.name}`
   }
 }
 
@@ -75,17 +73,17 @@ documents.layer = layer => {
  *
  */
 documents.symbol = symbol => {
-  const tags = ({ dimension, scope, tags }) => [
-    ...dimension ? dimension.split(', ') : [],
-    ...scope ? scope.split(', ') : [],
-    ...(tags || [])
+  const tags = [
+    ...symbol.dimensions,
+    ...symbol.scope,
+    ...(symbol.tags || [])
   ]
 
   return ({
     id: symbol.id,
     scope: 'symbol',
     text: symbol.hierarchy.join(' '),
-    tags: tags(symbol)
+    tags
   })
 }
 
@@ -110,3 +108,21 @@ documents.link = link => ({
   text: link.name,
   tags: link.tags
 })
+
+
+/**
+ *
+ */
+documents.project = project => {
+  const tags = [
+    ...(project.open ? ['open'] : []),
+    ...(project.tags || [])
+  ]
+
+  return {
+    id: project.id,
+    scope: 'project',
+    text: project.name,
+    tags
+  }
+}
