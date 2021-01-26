@@ -43,7 +43,7 @@ const uaUUIDs = [
   '97f4f448-7d30-4dc8-b508-9ae983710bef'
 ]
 
-const loopDelay = 100 /* ms */
+const loopDelay = 20 /* ms */
 
 const featureHandler = function () {
   var layerId
@@ -62,7 +62,8 @@ const featureHandler = function () {
         }
       }
 
-      this.send(JSON.stringify(feature))
+      const ops = [{ type: 'put', value: feature}]
+      this.send(JSON.stringify(ops))
       active && loop(position)
     }, loopDelay)
   }
@@ -106,7 +107,7 @@ const collectionHandler = function () {
       })
 
       const collection = { type: 'FeatureCollection', features }
-      this.send(JSON.stringify(collection))
+      this.send(JSON.stringify([{ type: 'put', value: collection }]))
       active && loop(positions)
     }, loopDelay)
   }
@@ -198,7 +199,7 @@ wss.on('connection', socket => {
   socket.alive = true
   socket.on('pong', heartbeat)
   // socket.handler = handlers[Math.floor(Math.random() * handlers.length)].bind(socket)
-  socket.handler = handlers[2].bind(socket)
+  socket.handler = handlers[1].bind(socket)
   socket.handler()
 })
 

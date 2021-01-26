@@ -30,6 +30,7 @@ const Tag = props => {
   }
 
   const handleDoubleClick = event => {
+    console.log('handleDoubleClick', event)
     const capabilities = props.capabilities || ''
     if (!capabilities.includes('FOLLOW')) return
     emitter.emit(`${props.id}/follow`)

@@ -392,7 +392,8 @@ emitter.on(`:id(${FEATURE_ID})/follow`, async ({ id }) => {
     level.batch(ops)
   } else {
     feature.follow = true
-    const ops = (await level.value('feature:', feature => feature.follow))
+    const ops = (await level.values('feature:'))
+      .filter(feature => feature.follow)
       .map(R.tap(feature => delete feature.follow))
       .map(feature => ({ type: 'put', key: feature.id, value: feature }))
 

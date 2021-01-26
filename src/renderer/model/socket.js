@@ -15,7 +15,8 @@ const addItem = item => {
 
   if(item.follow) {
     const center = feature.getGeometry().getFirstCoordinate()
-    emitter.emit('map/panto', { center, rotation })
+    // emitter.emit('map/panto', { center, rotation })
+    emitter.emit('map/panto', { center })
   }
 }
 
@@ -55,7 +56,6 @@ const socket = (id, url) => {
     socket.onmessage = ({ data }) => {
       const json = JSON.parse(data)
       const items = Array.isArray(json) ? json : [json]
-      console.log('received', items)
 
       items.forEach(order => {
         switch (order.type) {
@@ -125,4 +125,5 @@ emitter.on(':id/socket/close', ({ id }) => {
 emitter.on(':id/socket/error', ({ id, err }) => {
   // console.error('[socket]', err)
   delete sockets[id]
+  emitter.emit('map/panto', { center, rotation })
 })
