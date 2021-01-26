@@ -4,21 +4,21 @@ import emitter from '../emitter'
 import * as level from '../storage/level'
 import { documents } from '../model/documents'
 
-/**
- * Adapt domain models to indexable documents and
- * document refs to spotlight (view) model objects.
- */
+const nullScope = () => null
+const scope = key => documents[key.split(':')[0]] || nullScope
 
-var index
+const index = (name, scopes) => {
+  var index
 
-;(() => {
-  const nullScope = () => null
-  const scope = key => documents[key.split(':')[0]] || nullScope
+  const includes = op => scopes.includes(op.key.split(':')[0] + ':')
 
-  const reindex = async () => {
-    console.time('[lunr] re-index')
+  const refresh = async ops => {
+    const skip = index && ops && ops.length && !ops.find(includes)
+    if (skip) return /* noting to do */
 
-    const items = await level.values()
+    console.time(`[lunr:${name}] re-index`)
+    const reducer = async (acc, scope) => (await acc).concat(await level.values(scope))
+    const items = await scopes.reduce(reducer, [])
     const cache = items.reduce((acc, item) => {
       acc[item.id] = item
       return acc
@@ -32,22 +32,30 @@ var index
       this.pipeline.remove(lunr.stemmer)
       this.pipeline.remove(lunr.stopWordFilter) // allow words like 'so', 'own', etc.
       this.searchPipeline.remove(lunr.stemmer)
-      this.field('text')
-      this.field('scope')
-      this.field('tags')
-
+      ;['text', 'scope','tags'].forEach(field => this.field(field))
       docs.forEach(doc => this.add(doc))
     })
 
-    console.timeEnd('[lunr] re-index')
+    console.timeEnd(`[lunr:${name}] re-index`)
     emitter.emit('index/updated')
   }
 
-  emitter.on('storage/batch', reindex)
-  emitter.on('storage/put', reindex)
-})()
+  return {
+    refresh,
+    search: R.tryCatch(
+      terms => terms.trim() ? index.search(terms.trim()) : [],
+      R.always([])
+    )
+  }
+}
 
-export const searchIndex = R.tryCatch(
-  terms => terms.trim() ? index.search(terms.trim()) : [],
-  R.always([])
-)
+const indexes = [
+  index('symbol', ['symbol:']),
+  index('project', ['project:', 'layer:', 'feature:', 'place:', 'link:', 'group:'])
+]
+
+emitter.on('storage/batch', ({ ops }) => indexes.forEach(index => index.refresh(ops)))
+emitter.on('storage/put', ({ key, value }) => indexes.forEach(index => index.refresh([{ type: 'put', key, value }])))
+
+export const searchIndex = terms => indexes.
+  reduce((acc, index) => acc.concat(index.search(terms)), [])

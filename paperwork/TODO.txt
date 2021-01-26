@@ -1,0 +1,9 @@
+TODO
+- web worker: persistence/FTS index
+- search navigation (previous/next)
+- preferences/properties
+- FTS: debounce re-indexing
+- list: virtualize/windowing
+
+DONE
+- FTS: dedicated index for symbols
