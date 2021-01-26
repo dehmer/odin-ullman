@@ -62,18 +62,10 @@ const socket = (id, url) => {
 
       items.forEach(order => {
         switch (order.type) {
-          case 'put':
-            handlePut(order.value)
-            break;
-          case 'del':
-            handleDelete(order.key)
-            break;
-          case 'hide':
-            handleHide(order.key)
-            break;
-          case 'show':
-            handleShow(order.key)
-            break;
+          case 'put': return handlePut(order.value)
+          case 'del': return handleDelete(order.key)
+          case 'hide': return handleHide(order.key)
+          case 'show': return handleShow(order.key)
         }
       })
     }
