@@ -333,9 +333,6 @@ emitter.on('storage/features/add', async ({ feature }) => {
     identity: identity(sidc)
   }
 
-  console.log(item)
-
-
   item.id = featureId(layer.id)
   ops.push({ type: 'put', key: item.id, value: item })
   level.batch(ops)
