@@ -4,6 +4,7 @@ import emitter from '../emitter'
 import selection from '../selection'
 import * as level from '../storage/level'
 import forms from './forms.json'
+import { isFeature } from '../storage/ids'
 
 const intersect = (a, b) => a.filter(x => b.includes(x))
 
@@ -42,9 +43,10 @@ const selector = (form, match) => {
  *
  */
 emitter.on('selection', async () => {
-  if (!selection.selected().length) {
-    return emitter.emit('properties/updated', { result: [] })
-  }
+
+  // Feature-only for now.
+  const selected = selection.selected(id => isFeature(id))
+  if (!selected.length) return emitter.emit('properties/updated', { result: [] })
 
   const forms = (await level.values('form:'))
     .reduce((acc, form) => {
@@ -103,7 +105,7 @@ emitter.on('selection', async () => {
     .map(R.tap(field => field.value = value(field.value)))
     .map(R.tap(field => field.ids = items.map(R.prop('id'))))
 
-  const items = await level.values(selection.selected())
+  const items = await level.values(selected)
   if (!items.length) return []
 
   const properties = (items => {
