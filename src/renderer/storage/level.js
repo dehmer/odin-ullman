@@ -16,6 +16,42 @@ const isMasterKey = key => key.startsWith('project:') || key.startsWith('symbol:
 /**
  *
  */
+const updateProjects = async ops => {
+  const path = id => `./db/${id.split(':')[1]}`
+
+  const isOpen = id => project &&
+    project.isOpen() &&
+    project.db.db.location === path(id)
+
+  const close = async () => {
+    await project.close()
+    project = null
+  }
+
+  // delete database file(s) (if any)
+  await Promise.all(ops
+    .filter(op => isProject(op.key) && op.type === 'del')
+    .map(async op => {
+      if (isOpen(op.key)) await close()
+      fs.rmdirSync(path(op.key), { recursive: true })
+    })
+  )
+
+  // open project (if any)
+  await Promise.all(ops
+    .filter(op => isProject(op.key) && op.type === 'put' && op.value.open)
+    .map(async op => {
+      if (project && project.isOpen()) await close()
+      project = levelup(encoding(leveldown(path(op.key)), { valueEncoding: 'json' }))
+      emitter.emit('project/open')
+    })
+  )
+}
+
+
+/**
+ *
+ */
 export const put = async (item, ops) => {
   const quiet = ops && ops.quiet
   const optional = ops && ops.optional
@@ -108,6 +144,8 @@ export const batch = async ops => {
   const [masterOps, projectOps] = R.partition(op => isMasterKey(op.key), ops)
   if (masterOps.length) await master.batch(masterOps)
   if (projectOps.length) await project.batch(projectOps)
+
+  await updateProjects(ops)
   emitter.emit('storage/batch', { ops })
 }
 
@@ -138,38 +176,3 @@ export const exists = prefix => new Promise((resolve, reject) => {
 
   batch([{ type: 'put', key: project.id, value: project }])
 })()
-
-
-/**
- *
- */
-emitter.on('storage/batch', async event => {
-  const path = id => `./db/${id.split(':')[1]}`
-  const ops = event.ops.filter(op => isProject(op.key))
-
-  const isOpen = id => {
-    if (!project) return false
-    if (!project.isOpen()) return false
-    const location = project.db.db.location
-    return location === path(id)
-  }
-
-  // delete database file(s) (if any)
-  await Promise.all(ops
-    .filter(op => op.type === 'del')
-    .map(async op => {
-      if (isOpen(op.key)) { await project.close(); project = null }
-      fs.rmdirSync(path(op.key), { recursive: true })
-    })
-  )
-
-  // open project (if any)
-  await Promise.all(ops
-    .filter(op => op.type === 'put' && op.value.open)
-    .map(async op => {
-      if (project && project.isOpen()) await project.close()
-      project = levelup(encoding(leveldown(path(op.key)), { valueEncoding: 'json' }))
-      emitter.emit('project/open')
-    })
-  )
-})
