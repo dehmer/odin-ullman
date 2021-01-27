@@ -1,9 +1,21 @@
 import React from 'react'
+import { createMuiTheme } from '@material-ui/core/styles'
+import { ThemeProvider } from '@material-ui/styles'
 import TextField from '@material-ui/core/TextField'
 import { Select as MuiSelect, MenuItem, InputLabel, Checkbox } from '@material-ui/core'
 import { FormControl, FormControlLabel } from '@material-ui/core'
-
 import emitter from '../emitter'
+
+const theme = createMuiTheme({
+  palette: {
+    primary: {
+     main: '#1fc3ce'
+    },
+    secondary: {
+      main: '#e03c31'
+    }
+  }
+});
 
 const Text = React.memo(props => {
   const [value, setValue] = React.useState(props.value || '')
@@ -21,7 +33,6 @@ const Text = React.memo(props => {
 
   return <TextField
     fullWidth={true}
-    variant='outlined'
     size='small'
     key={props.id}
     label={props.label}
@@ -131,7 +142,6 @@ const Identity = React.memo(props => {
         label="Excercise"
         control={
           <Checkbox
-            color="secondary"
             checked={exerciseChecked}
             onChange={handleExcerciseChange}
           />
@@ -152,9 +162,11 @@ const Property = React.forwardRef((props, ref) => {
   })(props.type)
 
   return (
-    <div className='property'>
-      { component }
-    </div>
+    <ThemeProvider theme={theme}>
+      <div className='property'>
+        { component }
+      </div>
+    </ThemeProvider>
   )
 })
 
