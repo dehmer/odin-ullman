@@ -43,7 +43,7 @@ div {
 
   display: grid;
   grid-gap: 1em;
-  grid-template-columns: 20em auto 26em;
+  grid-template-columns: 26em auto 26em;
   grid-template-areas: "L . R";
   pointer-events: none;
 
@@ -55,6 +55,12 @@ div {
 }
 
 .spotlight {
+  grid-area: L;
+  display: flex;
+  flex-direction: column;
+}
+
+.properties {
   grid-area: R;
   display: flex;
   flex-direction: column;

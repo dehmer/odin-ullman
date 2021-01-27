@@ -151,7 +151,7 @@ const Identity = React.memo(props => {
   )
 })
 
-const Property = React.forwardRef((props, ref) => {
+const Property = props => {
   const component = (type => {
     switch (type) {
       case 'text': return <Text {...props}/>
@@ -166,8 +166,7 @@ const Property = React.forwardRef((props, ref) => {
       <div className='property'>
         { component }
       </div>
-    </ThemeProvider>
-  )
-})
+    </ThemeProvider>  )
+}
 
 export default React.memo(Property)
