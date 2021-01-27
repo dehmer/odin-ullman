@@ -13,7 +13,7 @@ const addItem = item => {
     ? 2 * Math.PI - (item.properties.q / 180 * Math.PI)
     : 0
 
-  if(item.follow) {
+  if (item.follow) {
     const center = feature.getGeometry().getFirstCoordinate()
     // emitter.emit('map/panto', { center, rotation })
     emitter.emit('map/panto', { center })
@@ -34,18 +34,20 @@ const socket = (id, url) => {
     items.forEach(async item => {
       const mergedItem = { ...(await level.value(item.id)), ...item }
       level.put(mergedItem, { quiet: true })
-      const stale = featureById(item.id)
+      const stale = featureById(mergedItem.id)
       if (stale) source.removeFeature(stale)
-      if (!hidden[item.id]) addItem(mergedItem)
+      if (!(hidden[mergedItem.id] || mergedItem.hidden)) addItem(mergedItem)
     })
   }
 
-  const handleDelete = (id) => {
-    if (hidden[id] || featureById(id)) emitter.emit('items/remove', { ids: [id] })
+  const handleDelete = async (featureId) => {
+    if (featureId) {
+      if (hidden[featureId] || featureById(featureId)) emitter.emit('items/remove', { ids: [featureId] })
+    } else {
+      const featureIds = await level.keys(`feature:${id.split(':')[1]}`)
+      emitter.emit('items/remove', { ids: featureIds })
+    }
   }
-
-  const handleHide = id => hidden[id] = true
-  const handleShow = id => delete hidden[id]
 
   try {
     socket = new WebSocket(url)
@@ -61,8 +63,6 @@ const socket = (id, url) => {
         switch (order.type) {
           case 'put': return handlePut(order.value)
           case 'del': return handleDelete(order.key)
-          case 'hide': return handleHide(order.key)
-          case 'show': return handleShow(order.key)
         }
       })
     }
