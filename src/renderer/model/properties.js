@@ -37,8 +37,14 @@ const selector = (form, match) => {
     : []
 }
 
-emitter.on('properties/show', async () => {
-  if (!selection.selected().length) return
+
+/**
+ *
+ */
+emitter.on('selection', async () => {
+  if (!selection.selected().length) {
+    return emitter.emit('properties/updated', { result: [] })
+  }
 
   const forms = (await level.values('form:'))
     .reduce((acc, form) => {
@@ -65,48 +71,46 @@ emitter.on('properties/show', async () => {
 
   const value = xs => xs.length === 1 ? xs[0] : null // null: multiple values
 
-  const properties = async () => {
-    const items = await level.values(selection.selected())
-    if (!items.length) return []
-
-    const form = items
-      .map(item => R.uniq(selectors.flatMap(selector => selector(item))))
-      .reduce(intersect)
-      .map(id => fields[id])
-      .map(R.tap(field => field.value = items.map(item => extractValue(field.property, item))))
-      .map(R.tap(field => field.value = R.uniq(field.value)))
-      .map(R.tap(field => field.value = value(field.value)))
-      .map(R.tap(field => field.ids = items.map(R.prop('id'))))
-
-    if (form.length) return form
-    else {
-      const properties = items.reduce((acc, item) => {
-        Object.entries(item.properties).reduce((acc, [key, value]) => {
-          acc[key] = acc[key] || []
-          acc[key].push(value)
-          return acc
-        }, acc)
+  const genericProperties = items => {
+    const properties = items.reduce((acc, item) => {
+      Object.entries(item.properties).reduce((acc, [key, value]) => {
+        acc[key] = acc[key] || []
+        acc[key].push(value)
         return acc
-      }, {})
+      }, acc)
+      return acc
+    }, {})
 
-      const form = Object.entries(properties).map(([key, values]) => {
-        const field = {
-          id: `field:${uuid()}`,
-          label: key,
-          value: value(R.uniq(values)),
-          property: key,
-          ids: items.map(R.prop('id'))
-        }
+    return Object.entries(properties).map(([key, values]) => {
+      const field = {
+        id: `field:${uuid()}`,
+        label: key,
+        value: value(R.uniq(values)),
+        property: key,
+        ids: items.map(R.prop('id'))
+      }
 
-        return field
-      })
-
-      return form
-    }
+      return field
+    })
   }
 
-  emitter.emit('search/provider', {
-    scope: 'PROPERTIES',
-    provider: async (query, callback) => callback(await properties())
-  })
+  const formProperties = items => items
+    .map(item => R.uniq(selectors.flatMap(selector => selector(item))))
+    .reduce(intersect)
+    .map(id => fields[id])
+    .map(R.tap(field => field.value = items.map(item => extractValue(field.property, item))))
+    .map(R.tap(field => field.value = R.uniq(field.value)))
+    .map(R.tap(field => field.value = value(field.value)))
+    .map(R.tap(field => field.ids = items.map(R.prop('id'))))
+
+  const items = await level.values(selection.selected())
+  if (!items.length) return []
+
+  const properties = (items => {
+    const properties = formProperties(items)
+    if (properties.length) return properties
+    else return genericProperties(items)
+  })(items)
+
+  emitter.emit('properties/updated', { result: properties })
 })
