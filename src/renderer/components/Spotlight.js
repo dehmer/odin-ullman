@@ -151,13 +151,15 @@ const remove = state => R.tap(state => {
  */
 handlers['keydown/Backspace'] = (state, { shiftKey, metaKey }) => R.tap(state => {
   if (!metaKey || state.focus === -1) return
-  remove()
+  remove(state)
 }, state)
 
 /**
  *
  */
-handlers['keydown/Delete'] = remove
+handlers['keydown/Delete'] = (state, { shiftKey, metaKey }) => R.tap(state => {
+  remove(state)
+}, state)
 
 /**
  * Space.
@@ -248,20 +250,13 @@ const Spotlight = () => {
     dispatch({ path: 'click', index, shiftKey, metaKey })
   }, [state])
 
-  const card = (props, index) => props.id.startsWith('field:')
-    ? <Property
-        key={props.id}
-        ref={cardrefs[index]}
-        focus={state.focus === index}
-        {...props}
-      />
-    : <Card
-        key={props.id}
-        ref={cardrefs[index]}
-        focus={state.focus === index}
-        onClick={event => handleClick(index, event)}
-        {...props}
-      />
+  const card = (props, index) => <Card
+    key={props.id}
+    ref={cardrefs[index]}
+    focus={state.focus === index}
+    onClick={event => handleClick(index, event)}
+    {...props}
+  />
 
   const handleKeyDown = event => {
     const { key, shiftKey, metaKey } = event
