@@ -4,6 +4,9 @@ TODO
 - preferences/properties
 - FTS: debounce re-indexing
 - list: virtualize/windowing
+- spotlight/Windows: ctrl-click (selection)
+- spotlight/Windows: support DELETE key
+- ghosted features
 
 DONE
 - FTS: dedicated index for symbols

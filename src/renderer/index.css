@@ -107,6 +107,7 @@ div {
 
 .property {
   padding: 12px;
+  padding-bottom: 0px;
   display: flex;
   flex-direction: column; /* row (default) | row-reverse | column | column-reverse */
 }
