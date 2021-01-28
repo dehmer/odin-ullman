@@ -51,7 +51,7 @@ div {
     Give WebKit a chance to calculate determine explicit height.
     This is necessary to stretch children to desired height.
   */
-  height: calc(100vh - 10em);
+  height: calc(100vh - 4em);
 }
 
 .spotlight {
@@ -64,6 +64,7 @@ div {
   grid-area: R;
   display: flex;
   flex-direction: column;
+  overflow: auto;
 }
 
 .scopebar {
@@ -107,6 +108,7 @@ div {
 
 .property {
   padding: 12px;
+  padding-bottom: 0px;
   display: flex;
   flex-direction: column; /* row (default) | row-reverse | column | column-reverse */
 }

@@ -123,7 +123,5 @@ emitter.on(':id/socket/close', ({ id }) => {
 })
 
 emitter.on(':id/socket/error', ({ id, err }) => {
-  // console.error('[socket]', err)
   delete sockets[id]
-  emitter.emit('map/panto', { center, rotation })
 })

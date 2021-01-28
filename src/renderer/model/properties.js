@@ -3,13 +3,14 @@ import uuid from 'uuid-random'
 import emitter from '../emitter'
 import selection from '../selection'
 import * as level from '../storage/level'
-import forms from './forms.json'
+import { fields, selectors } from './forms'
+import { isFeature } from '../storage/ids'
 
 const intersect = (a, b) => a.filter(x => b.includes(x))
 
 emitter.on('project/open', () => {
-  forms.fields.forEach(field => level.put(field, { quiet: true }))
-  forms.selectors.forEach(selector => level.put(selector, { quiet: true }))
+  fields.forEach(field => level.put(field, { quiet: true }))
+  selectors.forEach(selector => level.put(selector, { quiet: true }))
 })
 
 const selector = (form, match) => {
@@ -42,9 +43,10 @@ const selector = (form, match) => {
  *
  */
 emitter.on('selection', async () => {
-  if (!selection.selected().length) {
-    return emitter.emit('properties/updated', { result: [] })
-  }
+
+  // Feature-only for now.
+  const selected = selection.selected(id => isFeature(id))
+  if (!selected.length) return emitter.emit('properties/updated', { result: [] })
 
   const forms = (await level.values('form:'))
     .reduce((acc, form) => {
@@ -65,7 +67,9 @@ emitter.on('selection', async () => {
 
   const extractValue = (property, item) => {
     return Array.isArray(property)
-      ? item.properties[property[0]][property[1]]
+      ? property.length === 2
+        ? item.properties[property[0]][property[1]]
+        : item.properties[property[0]].substring(property[1], property[2] + 1)
       : item.properties[property]
   }
 
@@ -84,7 +88,7 @@ emitter.on('selection', async () => {
     return Object.entries(properties).map(([key, values]) => {
       const field = {
         id: `field:${uuid()}`,
-        label: key,
+        label: key.toUpperCase(),
         value: value(R.uniq(values)),
         property: key,
         ids: items.map(R.prop('id'))
@@ -103,7 +107,7 @@ emitter.on('selection', async () => {
     .map(R.tap(field => field.value = value(field.value)))
     .map(R.tap(field => field.ids = items.map(R.prop('id'))))
 
-  const items = await level.values(selection.selected())
+  const items = await level.values(selected)
   if (!items.length) return []
 
   const properties = (items => {

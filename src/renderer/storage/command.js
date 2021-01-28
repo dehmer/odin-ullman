@@ -473,7 +473,8 @@ emitter.on('storage/project', () => {
 
 emitter.on(`:id(${FIELD_ID})/update`, async ({ ids, property, value }) => {
   const updateValue = (property, item) => {
-    const replace = (s, i, c) => s.substring(0, i) + c + s.substring(i + 1)
+    const replace = (s, i, c) => s.substring(0, i) + c + s.substring(i + c.length)
+
     if (Array.isArray(property)) {
       item.properties[property[0]] = replace(item.properties[property[0]], property[1], value)
     } else item.properties[property] = value

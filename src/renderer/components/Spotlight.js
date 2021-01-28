@@ -140,23 +140,19 @@ handlers['keydown/a'] = (state, { shiftKey, metaKey }) => R.tap(({ list }) => {
   selection.set(selected)
 }, state)
 
-
 /**
  *
  */
-
-const remove = state => {
+const remove = R.tap(state => {
   const { focus, list} = state
   if (focus === -1) return
   const include = (entry, index) => entry.selected || index === focus
   const ids = list.filter(include).map(R.prop('id'))
   emitter.emit('items/remove', { ids })
-  return state
-}
+})
 
 // All platforms:
 handlers['keydown/Delete'] = remove
-
 
 // Additionally, Mac only:
 if (navigator.platform && navigator.platform.toLowerCase().includes('mac')) {
@@ -252,20 +248,13 @@ const Spotlight = () => {
     dispatch({ path: 'click', index, shiftKey, metaKey })
   }, [state])
 
-  const card = (props, index) => props.id.startsWith('field:')
-    ? <Property
-        key={props.id}
-        ref={cardrefs[index]}
-        focus={state.focus === index}
-        {...props}
-      />
-    : <Card
-        key={props.id}
-        ref={cardrefs[index]}
-        focus={state.focus === index}
-        onClick={event => handleClick(index, event)}
-        {...props}
-      />
+  const card = (props, index) => <Card
+    key={props.id}
+    ref={cardrefs[index]}
+    focus={state.focus === index}
+    onClick={event => handleClick(index, event)}
+    {...props}
+  />
 
   const handleKeyDown = event => {
     const { key, shiftKey, metaKey } = event
