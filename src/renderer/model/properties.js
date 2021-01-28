@@ -88,7 +88,7 @@ emitter.on('selection', async () => {
     return Object.entries(properties).map(([key, values]) => {
       const field = {
         id: `field:${uuid()}`,
-        label: key,
+        label: key.toUpperCase(),
         value: value(R.uniq(values)),
         property: key,
         ids: items.map(R.prop('id'))
