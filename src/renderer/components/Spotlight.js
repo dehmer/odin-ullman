@@ -140,17 +140,24 @@ handlers['keydown/a'] = (state, { shiftKey, metaKey }) => R.tap(({ list }) => {
   selection.set(selected)
 }, state)
 
+const remove = state => R.tap(state => {
+  const include = (entry, index) => entry.selected || index === state.focus
+  const ids = state.list.filter(include).map(R.prop('id'))
+  emitter.emit('items/remove', { ids })
+}, state)
 
 /**
  *
  */
 handlers['keydown/Backspace'] = (state, { shiftKey, metaKey }) => R.tap(state => {
   if (!metaKey || state.focus === -1) return
-  const include = (entry, index) => entry.selected || index === state.focus
-  const ids = state.list.filter(include).map(R.prop('id'))
-  emitter.emit('items/remove', { ids })
+  remove()
 }, state)
 
+/**
+ *
+ */
+handlers['keydown/Delete'] = remove
 
 /**
  * Space.
