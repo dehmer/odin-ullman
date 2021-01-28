@@ -22,8 +22,8 @@ const bindings = [
   ['f2', () => emitter.emit('storage/group')],
   ['f3', () => emitter.emit('storage/snapshot')],
   ['f4', () => emitter.emit('storage/layer')],
-  ['f5', () => emitter.emit('storage/socket')],
-  ['f6', () => emitter.emit('storage/project')]
+  ['f5', () => emitter.emit('storage/project')],
+  ['f6', () => emitter.emit('storage/socket')]
 ]
 
 bindings.forEach(([key, fn]) => Mousetrap.bind(key, fn))
