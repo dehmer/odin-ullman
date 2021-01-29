@@ -13,29 +13,39 @@ emitter.on('project/open', () => {
   selectors.forEach(selector => level.put(selector, { quiet: true }))
 })
 
-const selector = (form, match) => {
-  const [_, attr, op, value, flag] = match
-
+const selector = (form, matches) => {
   const matchers = {}
 
-  matchers['~='] = item => {
+  matchers['~='] = ([_, attr, op, value], item) => {
     const values = item[attr]
       ? Array.isArray(item[attr])
         ? item[attr].map(value => value.toLowerCase())
         : item[attr].split(' ').map(value => value.toLowerCase())
       : []
-    return values.includes(value)
+
+    return !!values.find(x => x.includes(value))
   }
 
-  matchers['*='] = item => item[attr]
+  matchers['*='] = ([_, attr, op, value], item) => item[attr]
     ? item[attr].toLowerCase().includes(value.toLowerCase())
     : false
 
-  return item => matchers[op]
-    ? matchers[op](item)
-      ? form.fields
-      : []
-    : []
+  return item => {
+    const forms = matches.map(match => {
+      const op = match[2]
+      if(matchers[op] && matchers[op](match, item)) return form
+    }).filter(R.identity)
+
+    if (!forms.length) return []
+
+    // Multiple/different forms per item are not supported.
+    if (R.uniq(forms.map(R.prop('id'))).length > 1) {
+      console.error('[forms]: unsupported multiple matches', item)
+      return []
+    }
+
+    return forms[0].fields
+  }
 }
 
 
@@ -61,8 +71,9 @@ emitter.on('selection', async () => {
     }, {})
 
   const selectors = Object.values(forms).map(form => {
-    const match = /(\w+)\s*([~*]?=)\s*(\w+)\s*([iIsS]?)/.exec(form.selector)
-    return match ? selector(form, match) : R.always(null)
+    const matches = (Array.isArray(form.selector) ? form.selector : [form.selector])
+      .map(selector => /(\w+)\s*([~*]?=)\s*(\w+)\s*([iIsS]?)/.exec(selector))
+    return selector(form, matches)
   })
 
   const extractValue = (property, item) => {
