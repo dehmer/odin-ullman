@@ -18,6 +18,7 @@ export const TitleEditor = props => {
     else if (event.key === 'ArrowUp') noop()
     else if (event.key === 'Escape') commit(props.value)
     else if (event.key === ' ') event.stopPropagation()
+    else if (event.key === 'Delete') event.stopPropagation()
   }
 
   return <div>

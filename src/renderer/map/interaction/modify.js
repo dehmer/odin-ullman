@@ -20,7 +20,7 @@ import {
 import { fromUserExtent, toUserExtent, fromUserCoordinate, toUserCoordinate } from 'ol/proj'
 import { createOrUpdateFromCoordinate as createExtent, buffer as bufferExtent } from 'ol/extent'
 import { getUid } from 'ol/util.js';
-import { layout, maxPoints } from '../../model/symbols'
+import { layout, maxPoints } from '../../storage/symbols'
 import corridor from './corridor'
 import fan from './fan'
 import seize from './seize'

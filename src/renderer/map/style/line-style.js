@@ -1,5 +1,5 @@
 import * as geom from 'ol/geom'
-import { normalize } from '../../model/sidc'
+import { normalize } from '../../storage/sidc'
 import { labels as lineLabels } from './line-labels'
 import { geometries } from './line-geometries'
 import { styleFactory, defaultStyle } from './default-style'

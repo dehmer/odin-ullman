@@ -1,6 +1,6 @@
 import * as R from 'ramda'
 import * as geom from 'ol/geom'
-import { normalize } from '../../model/sidc'
+import { normalize } from '../../storage/sidc'
 import * as L from './polygon-labels'
 import { fills } from './polygon-fills'
 import { styleFactory } from './default-style'

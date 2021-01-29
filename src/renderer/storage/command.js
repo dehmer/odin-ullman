@@ -12,8 +12,7 @@ import { writeGeometryObject, writeFeatureObject } from './format'
 import selection from '../selection'
 import { currentDateTime, toMilitaryTime } from '../model/datetime'
 import './command-tag'
-import { hierarchy, dimensions, scope } from '../model/symbols'
-import { identity } from '../model/sidc'
+import * as symbols from './symbols'
 
 
 // -> command handlers
@@ -42,16 +41,7 @@ emitter.on('layers/import', async ({ layers }) => {
     acc.push({ type: 'put', key: layer.id, value: layer })
 
     const ops = features
-      .map(R.tap(feature => {
-        feature.id = featureId(layer.id)
-        const sidc = feature.properties.sidc
-        if (sidc) {
-          feature.scope = scope(sidc),
-          feature.dimensions = dimensions(sidc),
-          feature.hierarchy = hierarchy(sidc)
-          feature.identity = identity(sidc)
-        }
-      }))
+      .map(feature => ({ id: featureId(layer.id), ...feature, ...symbols.meta(feature) }))
       .map(value => ({ type: 'put', key: value.id, value }))
 
     acc.push(...ops)
@@ -353,16 +343,12 @@ emitter.on('storage/features/add', async ({ feature }) => {
   const layer = await defaultLayer()
   if (!layer) return
 
-  const sidc = feature.get('sidc')
   const item = {
+    id: featureId(layer.id),
     ...writeFeatureObject(feature),
-    scope: scope(sidc),
-    dimensions: dimensions(sidc),
-    hierarchy: hierarchy(sidc),
-    identity: identity(sidc)
+    ...meta(feature)
   }
 
-  item.id = featureId(layer.id)
   ops.push({ type: 'put', key: item.id, value: item })
   level.batch(ops)
 })

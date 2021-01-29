@@ -1,4 +1,4 @@
-import { normalize } from '../../model/sidc'
+import { normalize } from '../../storage/sidc'
 import corridors from './corridors'
 import { styleFactory, defaultStyle } from './default-style'
 

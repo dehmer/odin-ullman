@@ -1,16 +1,22 @@
+import os from 'os'
+import path from 'path'
+import fs from 'fs'
 import * as R from 'ramda'
 import uuid from 'uuid-random'
 import levelup from 'levelup'
 import leveldown from 'leveldown'
 import encoding from 'encoding-down'
-import fs from 'fs'
 import emitter from '../emitter'
 import { isProject } from './ids'
+import * as symbols from './symbols'
 
 const master = levelup(encoding(leveldown('./db/master'), { valueEncoding: 'json' }))
 var project /* last open project is loaded below */
 
-const isMasterKey = key => key.startsWith('project:') || key.startsWith('symbol:')
+
+const isMasterKey = key => key.startsWith('project:') ||
+  key.startsWith('symbol:') ||
+  key.startsWith('import:')
 
 
 /**
@@ -18,7 +24,6 @@ const isMasterKey = key => key.startsWith('project:') || key.startsWith('symbol:
  */
 const updateProjects = async ops => {
   const path = id => `./db/${id.split(':')[1]}`
-
   const isOpen = id => project &&
     project.isOpen() &&
     project.db.db.location === path(id)
@@ -150,10 +155,7 @@ export const batch = async ops => {
 }
 
 
-/**
- * master only for now
- */
-export const exists = prefix => new Promise((resolve, reject) => {
+const exists = prefix => new Promise((resolve, reject) => {
   const options = { keys: true, values: false, gte: prefix, lte: prefix + '\xff' }
   master.createReadStream(options)
     .on('data', () => resolve(true))
@@ -161,13 +163,112 @@ export const exists = prefix => new Promise((resolve, reject) => {
     .once('end', () => resolve(false))
 })
 
+const readSymbols = async () => {
+  if (await exists('symbol:')) return
+  // Populate storage with symbols if missing:
+  const id = symbol => `symbol:${symbol.sidc.substring(0, 10)}`
+  await master.batch(Object.values(symbols).map(symbol => {
+    symbol.id = id(symbol)
+    return { type: 'put', key: symbol.id, value: symbol }
+  }))
+}
+
+/**
+ *
+ */
+const importProjects = async projects => {
+  const USER_HOME = os.homedir()
+  const ODIN_HOME = path.join(USER_HOME, 'ODIN')
+  const PROJECTS = path.join(ODIN_HOME, 'projects')
+
+  // Only import once:
+  const imports = await values('import:')
+  if (imports.find(x => x.path === USER_HOME)) return
+  await put({ id: `import:${uuid()}`, path: USER_HOME}, { quiet: true })
+
+  const readLayers = project => new Promise((resolve, reject) => {
+    fs.readdir(path.join(PROJECTS, project, 'layers'), { withFileTypes: true }, (err, files) => {
+      if (err) return reject(err)
+      resolve(files
+        .filter(dirent => dirent.isFile())
+        .filter(dirent => dirent.name.endsWith('.json'))
+        .map(dirent => dirent.name)
+        .map(layer => path.join(PROJECTS, project, 'layers', layer))
+        .map(layer => {
+          const json = JSON.parse(fs.readFileSync(layer, 'utf8'))
+          json.name = path.basename(layer, '.json')
+          return json
+        })
+        .map(R.tap(layer => layer.id = `layer:${uuid()}`))
+        .map(layer => {
+          layer.features = layer.features.map(feature => {
+            delete feature.id
+            delete feature.properties.layerId
+            if (feature.properties.locked) { feature.locked = true;  delete feature.properties.locked }
+            if (feature.properties.hidden) { feature.hidden = true; delete feature.properties.hidden }
+            return {
+              id: `feature:${layer.id.split(':')[1]}/${uuid()}`,
+              ...feature,
+              ...symbols.meta(feature)
+            }
+          })
+
+          return layer
+        })
+      )
+    })
+  })
+
+  const readProjects = () => new Promise((resolve, reject) => {
+    const uuidPattern = /^[a-f\d]{8}-[a-f\d]{4}-4[a-f\d]{3}-[89AB][a-f\d]{3}-[a-f\d]{12}$/i
+    fs.readdir(PROJECTS, { withFileTypes: true }, (err, files) => {
+      if (err) return reject(err)
+      resolve(files
+        .filter(dirent => dirent.isDirectory())
+        .filter(dirent => uuidPattern.test(dirent.name))
+        .map(dirent => dirent.name)
+        .filter(name => !projects.find(({ id }) => id.includes(name)))
+      )
+    })
+  })
+
+  readProjects().then(projects => projects.map(async project => {
+    const db = levelup(encoding(leveldown(`./db/${project}`), { valueEncoding: 'json' }))
+    const layers = await readLayers(project)
+    const ops = layers.reduce((acc, layer) => {
+      acc.push({ type: 'put', key: layer.id, value: layer })
+      layer.features.reduce((acc, feature) => {
+        acc.push({ type: 'put', key: feature.id, value: feature })
+        return acc
+      }, acc)
+      return acc
+    }, [])
+    await db.batch(ops)
+    await db.close()
+  }))
+
+  await (async () => {
+    const projects = await readProjects()
+    const ps = projects.map(async project => {
+      const meta = JSON.parse(fs.readFileSync(path.join(PROJECTS, project, 'metadata.json'), 'utf8'))
+      const id = `project:${project}`
+      return { type: 'put', key: id, value: { ...meta, id } }
+    })
+    const ops = await Promise.all(ps)
+    await master.batch(ops)
+  })()
+}
 
 /**
  *
  */
 ;(async () => {
+  await readSymbols()
+
   const options = { keys: false, values: true, gte: 'project:', lte: 'project:' + '\xff' }
   const projects = await readMaster(options)
+  await importProjects(projects)
+
   const project = projects.find(project => project.open) || {
     id: `project:${uuid()}`,
     name: 'Project',

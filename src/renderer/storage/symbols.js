@@ -1,27 +1,15 @@
+import Feature from 'ol/Feature'
 import ms from 'milsymbol'
 import json from './symbols.json'
-import { normalize } from './sidc'
-import * as level from '../storage/level'
+import { normalize, identity } from './sidc'
 
-const id = descriptor => `symbol:${descriptor.sidc.substring(0, 10)}`
-
-const symbols = json.reduce((acc, symbol) => {
+export const symbols = json.reduce((acc, symbol) => {
   symbol.dimensions = symbol.dimension ? symbol.dimension.split(', ') : []
   symbol.scope = symbol.scope ? [symbol.scope] : []
   delete symbol.dimension
   acc[normalize(symbol.sidc)] = symbol
   return acc
 }, {})
-
-;(async () => {
-  if (await level.exists('symbol:')) return
-
-  // Populate storage with symbols if missing:
-  level.batch(Object.values(symbols).map(symbol => {
-    symbol.id = id(symbol)
-    return { type: 'put', key: symbol.id, value: symbol }
-  }))
-})()
 
 export const hierarchy = sidc => {
   if (!sidc) return ['N/A']
@@ -39,6 +27,20 @@ export const scope = sidc => {
   if (!sidc) return []
   const symbol = symbols[normalize(sidc)]
   return symbol ? symbol.scope : []
+}
+
+export const meta = feature => {
+  const sidc = feature instanceof Feature
+    ? feature.get('sidc')
+    : feature.properties.sidc
+
+  if (!sidc) return {}
+  return {
+    scope: scope(sidc),
+    dimensions: dimensions(sidc),
+    hierarchy: hierarchy(sidc),
+    identity: identity(sidc)
+  }
 }
 
 const placeholderSymbol = new ms.Symbol('')

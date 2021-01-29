@@ -1,5 +1,5 @@
 import * as R from 'ramda'
-import { normalize } from '../../model/sidc'
+import { normalize } from '../../storage/sidc'
 import { format } from '../format'
 import { styleFactory, defaultStyle, biggerFont } from './default-style'
 import * as TS from '../ts'

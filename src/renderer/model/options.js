@@ -1,6 +1,6 @@
 import * as R from 'ramda'
 import * as level from '../storage/level'
-import { url } from './symbols'
+import { url } from '../storage/symbols'
 import { searchIndex } from '../search/lunr'
 import { layerId } from '../storage/ids'
 
