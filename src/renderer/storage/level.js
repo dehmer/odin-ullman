@@ -10,6 +10,7 @@ import emitter from '../emitter'
 import { isProject } from './ids'
 import * as symbols from './symbols'
 
+if (!fs.existsSync('db')) fs.mkdirSync('db')
 const master = levelup(encoding(leveldown('./db/master'), { valueEncoding: 'json' }))
 var project /* last open project is loaded below */
 
@@ -165,9 +166,11 @@ const exists = prefix => new Promise((resolve, reject) => {
 
 const readSymbols = async () => {
   if (await exists('symbol:')) return
+
+  console.log('loading symbols...')
   // Populate storage with symbols if missing:
   const id = symbol => `symbol:${symbol.sidc.substring(0, 10)}`
-  await master.batch(Object.values(symbols).map(symbol => {
+  await master.batch(Object.values(symbols.symbols).map(symbol => {
     symbol.id = id(symbol)
     return { type: 'put', key: symbol.id, value: symbol }
   }))
