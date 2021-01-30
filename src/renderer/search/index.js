@@ -2,9 +2,8 @@ import * as R from 'ramda'
 import { searchIndex } from './lunr'
 import { searchOSM } from './nominatim'
 import emitter from '../emitter'
-import { options } from '../model/options'
+import { all } from '../model/options'
 import { compare } from './compare'
-import * as level from '../storage/level'
 
 const limit = R.take(200)
 // const limit = R.identity /* no limits */
@@ -21,10 +20,7 @@ const sort = entries => entries.sort((a, b) => {
   else return compare(field)(a, b)
 })
 
-const refs = async refs => {
-  const items = (await level.values(refs.map(({ ref }) => ref))).filter(R.identity)
-  return await Promise.all(items.map(item => options[item.id.split(':')[0]](item)))
-}
+const refs = async refs => all(refs.map(R.prop('ref')))
 
 const lunrProvider = scope => {
 

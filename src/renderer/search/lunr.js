@@ -17,7 +17,12 @@ const index = (name, scopes) => {
     if (skip) return /* noting to do */
 
     console.time(`[lunr:${name}] re-index`)
-    const reducer = async (acc, scope) => (await acc).concat(await level.values(scope))
+    const reducer = async (accp, scope) => {
+      const acc = await accp
+      const values = await level.values(scope)
+      return acc.concat(values)
+    }
+
     const items = await scopes.reduce(reducer, [])
     const cache = items.reduce((acc, item) => {
       acc[item.id] = item

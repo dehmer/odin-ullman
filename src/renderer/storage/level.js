@@ -111,7 +111,10 @@ const readProject = options => new Promise((resolve, reject) => {
  *
  */
 export const values = async arg => {
-  if (Array.isArray(arg)) return await Promise.all(arg.map(value))
+  if (Array.isArray(arg)) {
+    console.error('[level] deprecated.')
+    return await Promise.all(arg.map(value))
+  }
   else {
     const prefix = arg
     const options = prefix

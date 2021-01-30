@@ -6,7 +6,7 @@ import * as level from './level'
 import emitter from '../emitter'
 import { isGroup, isSymbol } from './ids'
 import { FEATURE_ID, LAYER_ID, PLACE_ID, GROUP_ID, SYMBOL_ID } from './ids'
-import { options } from '../model/options'
+import { all } from '../model/options'
 import { searchIndex } from '../search/lunr'
 import { readGeometry, readFeature } from './format'
 import selection from '../selection'
@@ -14,16 +14,13 @@ import geometry from './geometry'
 
 export const highlightedFeatures = new Collection()
 
-const option = id => options[id.split(':')[0]](id)
-
 
 emitter.on(`:id(${LAYER_ID})/open`, async ({ id }) => {
   const layer = await level.value(id)
-  const uuid = id.split(':')[1]
 
   const features = async () => {
-    const keys = await level.keys(`feature:${uuid}`)
-    return await Promise.all(keys.map(option))
+    const ids = await level.keys(`feature:${id.split(':')[1]}`)
+    return all(ids)
   }
 
   emitter.emit('search/provider', {
@@ -35,11 +32,11 @@ emitter.on(`:id(${LAYER_ID})/open`, async ({ id }) => {
 emitter.on(`:id(${GROUP_ID})/open`, async ({ id }) => {
   const group = await level.value(id)
 
-  const options = async () => {
+  const options = () => {
     const ids = searchIndex(group.terms)
       .filter(({ ref }) => !isGroup(ref) && !isSymbol(ref))
-      .map(({ ref }) => ref)
-    return await Promise.all(ids.map(option))
+      .map(R.prop('ref'))
+    return all(ids)
   }
 
   emitter.emit('search/provider', {
@@ -85,7 +82,7 @@ emitter.on(`:id(${FEATURE_ID})/links`, async ({ id }) => {
   const feature = await level.value(id)
   const links = async () => {
     const feature = await level.value(id)
-    const links = (feature.links || []).map(option)
+    const links = await all(feature.links || [])
     return Promise.all(links)
   }
 
@@ -99,7 +96,7 @@ emitter.on(`:id(${LAYER_ID})/links`, async ({ id }) => {
   const layer = await level.value(id)
   const links = async () => {
     const layer = await level.value(id)
-    const links = (layer.links || []).map(option)
+    const links = await all(layer.links || [])
     return Promise.all(links)
   }
 

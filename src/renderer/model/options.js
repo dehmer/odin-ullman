@@ -12,11 +12,7 @@ export const options = {}
 /**
  * feature:
  */
-options.feature = async feature => {
-  if (typeof feature === 'string') {
-    return options.feature(await level.value(feature))
-  }
-
+options.feature = async (feature, cache) => {
   const tags = feature => {
     const dimensions = feature.dimensions || []
     const scope = feature.scope || []
@@ -33,7 +29,7 @@ options.feature = async feature => {
     ].join(' ')
   }
 
-  const layer = await level.value(layerId(feature.id))
+  const layer = await cache(layerId(feature.id))
   const { properties } = feature
   const { sidc, t } = properties
   const hierarchy = feature.hierarchy || ['N/A']
@@ -54,16 +50,13 @@ options.feature = async feature => {
 /**
  * group:
  */
-options.group = async group => {
-  if (typeof group === 'string') {
-    return options.group(await level.value(group))
-  }
+options.group = async (group, cache) => {
 
-  const ps = searchIndex(group.terms)
+  const ids = searchIndex(group.terms)
     .filter(({ ref }) => !ref.startsWith('group:'))
-    .map(({ ref }) => options[ref.split(':')[0]](ref))
+    .map(R.prop('ref'))
+  const items = await all(ids, cache)
 
-  const items = await Promise.all(ps)
   const tags = R.uniq(items.flatMap(item => item.tags.split(' ')))
     .filter(tag => tag.match(/SYSTEM:(HIDDEN|VISIBLE).*/))
 
@@ -85,11 +78,7 @@ options.group = async group => {
 /**
  * layer:
  */
-options.layer = async layer => {
-  if (typeof layer === 'string') {
-    return options.layer(await level.value(layer))
-  }
-
+options.layer = layer => {
   const tags = feature => {
     const { type, hidden, active, tags, links } = feature
 
@@ -123,11 +112,7 @@ options.layer = async layer => {
 /**
  * symbol:
  */
-options.symbol = async symbol => {
-  if (typeof symbol === 'string') {
-    return options.symbol(await level.value(symbol))
-  }
-
+options.symbol = symbol => {
   const replace = (s, i, r) => s.substring(0, i) + r + s.substring(i + r.length)
 
   const tags = symbol => [
@@ -152,11 +137,7 @@ options.symbol = async symbol => {
 /**
  * place:
  */
-options.place = async place => {
-  if (typeof place === 'string') {
-    return options.place(await level.value(place))
-  }
-
+options.place = place => {
   const tags = place => [place.class, place.type]
     .filter(R.identity)
     .map(label => `SYSTEM:${label}:NONE`)
@@ -179,7 +160,7 @@ options.place = async place => {
 /**
  * link:
  */
-options.link = async link => {
+options.link = link => {
   const path = type => {
     switch (type) {
       case 'application/pdf': return 'mdiAdobeAcrobat'
@@ -207,7 +188,7 @@ options.link = async link => {
 /**
  * project:
  */
-options.project = async project => ({
+options.project = project => ({
   id: project.id,
   title: project.name,
   tags: [
@@ -218,3 +199,22 @@ options.project = async project => ({
   capabilities: 'TAG|RENAME',
   actions: 'PRIMARY:open'
 })
+
+function memoize(method) {
+  const cache = {}
+  return async function() {
+    const args = JSON.stringify(arguments)
+    cache[args] = cache[args] || method.apply(this, arguments)
+    return cache[args]
+  }
+}
+
+export const all = (ids, cache = memoize(level.value)) => {
+  return ids.reduce(async (accp, id) => {
+    const acc = await accp
+    const item = await cache(id)
+    const option = await options[item.id.split(':')[0]](item, cache)
+    acc.push(option)
+    return acc
+  }, [])
+}
