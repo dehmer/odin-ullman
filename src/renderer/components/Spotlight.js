@@ -2,7 +2,6 @@ import * as R from 'ramda'
 import React from 'react'
 import { CardList } from './CardList'
 import Card from './Card'
-import Property from './Property'
 import { Search } from './Search'
 import { Scopebar } from './Scopebar'
 import emitter from '../emitter'
@@ -30,16 +29,28 @@ handlers['search/result/updated'] = (state, { result }) => {
     if (selection.isSelected(entry.id)) xs[i] = { ...entry, selected: true }
   })
 
+  // Last focused entry still present? Update focus index.
+  if (state.focusId) {
+    const focusIndex = list.findIndex(entry => entry.id === state.focusId)
+    if (focusIndex !== - 1) return { list, focusIndex}
+  }
+
   const firstSelected = list.findIndex(entry => entry.selected)
-  const focus = firstSelected !== -1
+  const focusIndex = firstSelected !== -1
     ? firstSelected
-    : state.focus <= list.length - 1
-      ? state.focus
+    : state.focusIndex <= list.length - 1
+      ? state.focusIndex
       : -1
 
-  return { list, focus }
+  return { list, focusIndex }
 }
 
+/**
+ * Reset focus on new search provider.
+ */
+handlers['search/provider/updated'] = state => {
+  return { ...state, focusIndex: -1, focusId: null }
+}
 
 /**
  *
@@ -57,12 +68,12 @@ handlers.selection = (state, { selected, deselected }) => {
  */
 handlers['keydown/ArrowDown'] = (state, { shiftKey, metaKey }) => {
   const list = state.list
-  const focus = metaKey
+  const focusIndex = metaKey
     ? list.length - 1
-    : Math.min(list.length - 1, state.focus + 1)
+    : Math.min(list.length - 1, state.focusIndex + 1)
 
-  const currentEntry = list[state.focus]
-  const nextEntry = list[focus]
+  const currentEntry = list[state.focusIndex]
+  const nextEntry = list[focusIndex]
   const selected = shiftKey
     ? nextEntry.selected
       ? R.uniq([...toggleSelection(currentEntry), nextEntry.id])
@@ -70,7 +81,7 @@ handlers['keydown/ArrowDown'] = (state, { shiftKey, metaKey }) => {
     : []
 
   setTimeout(() => selection.set(selected), 0)
-  return { ...state, focus }
+  return { ...state, focusIndex }
 }
 
 
@@ -78,14 +89,14 @@ handlers['keydown/ArrowDown'] = (state, { shiftKey, metaKey }) => {
  * TODO: respect continuous selection block
  */
 handlers['keydown/ArrowUp'] = (state, { shiftKey, metaKey }) => {
-  if (state.focus === -1) return state
+  if (state.focusIndex === -1) return state
   const list = state.list
-  const focus = metaKey
+  const focusIndex = metaKey
     ? 0
-    : Math.max(0, state.focus - 1)
+    : Math.max(0, state.focusIndex - 1)
 
-  const currentEntry = list[state.focus]
-  const nextEntry = list[focus]
+  const currentEntry = list[state.focusIndex]
+  const nextEntry = list[focusIndex]
 
   const selected = shiftKey
     ? nextEntry.selected
@@ -94,7 +105,7 @@ handlers['keydown/ArrowUp'] = (state, { shiftKey, metaKey }) => {
     : []
 
   setTimeout(() => selection.set(selected), 0)
-  return { ...state, focus }
+  return { ...state, focusIndex }
 }
 
 
@@ -102,9 +113,9 @@ handlers['keydown/ArrowUp'] = (state, { shiftKey, metaKey }) => {
  *
  */
 handlers['keydown/Home'] = (state, { shiftKey }) => {
-  if (state.focus === -1) return state
-  const focus = state.list.length ? 0 : -1
-  return { ...state, focus }
+  if (state.focusIndex === -1) return state
+  const focusIndex = state.list.length ? 0 : -1
+  return { ...state, focusIndex }
 }
 
 
@@ -112,9 +123,9 @@ handlers['keydown/Home'] = (state, { shiftKey }) => {
  *
  */
 handlers['keydown/End'] = (state, { shiftKey }) => {
-  if (state.focus === -1) return state
-  const focus = state.list.length ? state.list.length - 1 : -1
-  return { ...state, focus }
+  if (state.focusIndex === -1) return state
+  const focusIndex = state.list.length ? state.list.length - 1 : -1
+  return { ...state, focusIndex }
 }
 
 
@@ -122,12 +133,12 @@ handlers['keydown/End'] = (state, { shiftKey }) => {
  *
  */
 handlers['keydown/Enter'] = state => {
-  const focus = state.focus
-  if (focus === -1) return state
-  if (!(state.list[focus].capabilities || '').includes('RENAME')) return state
+  const focusIndex = state.focusIndex
+  if (focusIndex === -1) return state
+  if (!(state.list[focusIndex].capabilities || '').includes('RENAME')) return state
   const list = [...state.list]
-  list[focus] = { ...list[focus], edit: true }
-  return { list, focus }
+  list[focusIndex] = { ...list[focusIndex], edit: true }
+  return { list, focusIndex, focusId: list[focusIndex].id }
 }
 
 
@@ -143,13 +154,19 @@ handlers['keydown/a'] = (state, { shiftKey, metaKey }) => R.tap(({ list }) => {
 /**
  *
  */
-const remove = R.tap(state => {
-  const { focus, list} = state
-  if (focus === -1) return
-  const include = (entry, index) => entry.selected || index === focus
+const remove = state => {
+  // TODO: set focusIndex to first selected
+  const { focusIndex, list} = state
+  if (focusIndex === -1) return state
+
+  const include = (entry, index) => entry.selected || index === focusIndex
   const ids = list.filter(include).map(R.prop('id'))
   emitter.emit('items/remove', { ids })
-})
+
+  const firstSelected = list.findIndex(entry => entry.selected)
+  const focus = firstSelected !== -1 ? firstSelected : focusIndex
+  return { ...state, focusIndex: focus, focusId: null }
+}
 
 // All platforms:
 handlers['keydown/Delete'] = remove
@@ -163,8 +180,8 @@ if (navigator.platform && navigator.platform.toLowerCase().includes('mac')) {
  * Space.
  */
 handlers['keydown/ '] = state => R.tap(state => {
-  if (state.focus === -1) return
-  selection.set(toggleSelection(state.list[state.focus]))
+  if (state.focusIndex === -1) return
+  selection.set(toggleSelection(state.list[state.focusIndex]))
 }, state)
 
 
@@ -184,9 +201,9 @@ const continuousSelection = (list, indexes) => {
  * FIXME: currently not quite right
  */
 const rangeSelection = (state, index) => {
-  const { list, focus } = state
-  const block = continuousSelection(list, [focus])
-  const [from, to] = focus < index ? [focus, index] : [index, focus]
+  const { list, focusIndex } = state
+  const block = continuousSelection(list, [focusIndex])
+  const [from, to] = focusIndex < index ? [focusIndex, index] : [index, focusIndex]
   const range = R.range(from, to + 1)
   return R.uniq([...range, ...block]).map(index => list[index].id)
 }
@@ -204,7 +221,7 @@ handlers.click = (state, { index, shiftKey, metaKey }) => {
 
   // Allow new focus to be applied before selection update:
   setTimeout(() => selection.set(selected), 0)
-  return { ...state, focus: index }
+  return { ...state, focusIndex: index }
 }
 
 
@@ -221,7 +238,12 @@ const reducer = (state, event) => {
  *
  */
 const Spotlight = () => {
-  const [state, dispatch] = React.useReducer(reducer, { list: [], focus: -1 })
+  const [state, dispatch] = React.useReducer(reducer, {
+    list: [],
+    focusIndex: -1,
+    focusId: null
+  })
+
   const ref = React.createRef()
   const cardrefs = state.list.map(_ => React.createRef())
 
@@ -235,13 +257,14 @@ const Spotlight = () => {
   }
 
   React.useEffect(() => {
-    const paths = ['search/result/updated', 'selection']
+    // Forward these events to reducer:
+    const paths = ['search/result/updated', 'selection', 'search/provider/updated']
     paths.forEach(path => emitter.on(path, dispatch))
     return () => paths.forEach(path => emitter.off(path, dispatch))
   }, [])
 
   React.useEffect(() => {
-    scrollIntoView(state.focus)
+    scrollIntoView(state.focusIndex)
   }, [state])
 
   const handleClick = React.useCallback((index, { metaKey, shiftKey }) => {
@@ -251,7 +274,7 @@ const Spotlight = () => {
   const card = (props, index) => <Card
     key={props.id}
     ref={cardrefs[index]}
-    focus={state.focus === index}
+    focus={state.focusIndex === index}
     onClick={event => handleClick(index, event)}
     {...props}
   />
@@ -259,7 +282,7 @@ const Spotlight = () => {
   const handleKeyDown = event => {
     const { key, shiftKey, metaKey } = event
     dispatch({ path: `keydown/${key}`, shiftKey, metaKey })
-    if (key === 'Enter' && state.focus !== -1) ref.current.focus()
+    if (key === 'Enter' && state.focusIndex !== -1) ref.current.focus()
   }
 
   return (
