@@ -22,7 +22,7 @@ const sort = entries => entries.sort((a, b) => {
 
 const refs = async refs => all(refs.map(R.prop('ref')))
 
-const lunrProvider = scope => {
+export const lunrProvider = (terms, filter = R.identity) => {
 
   const term = R.cond([
     [R.startsWith('#'), s => s.length < 2 ? '' : `+tags:${s.substring(1)}*`],
@@ -42,15 +42,15 @@ const lunrProvider = scope => {
 
   const search = async terms => {
     emitter.emit('search/current', { terms })
-    const options = await (R.compose(refs, searchIndex)(terms || '+tags:pin'))
+    const options = await (R.compose(filter, refs, searchIndex)(terms || '+tags:pin'))
     return R.compose(limit, sort)(options)
   }
 
   return async (query, callback) => {
-    const filter = translate(query.value)
-    scope
-      ? callback(await search(`+scope:${scope} ${filter}`))
-      : callback(await search(filter))
+    const filter = terms
+      ? terms + '  ' + translate(`${query.value}`)
+      : translate(`${query.value}`)
+    callback(await search(filter))
   }
 }
 
@@ -73,7 +73,7 @@ emitter.on('index/updated', () => search(currentQuery))
 emitter.on('search/scope/:scope', ({ scope }) => {
   switch (scope) {
     case 'all': provider = lunrProvider(''); break
-    default: provider = lunrProvider(scope); break
+    default: provider = lunrProvider(`+scope:${scope}`); break
   }
 
   emitter.emit('search/provider/updated', { scope })

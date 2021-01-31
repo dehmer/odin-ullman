@@ -4,44 +4,30 @@ import Feature from 'ol/Feature'
 import { getCenter } from 'ol/extent'
 import * as level from './level'
 import emitter from '../emitter'
-import { isGroup, isSymbol } from './ids'
+import { isGroup, layerId } from './ids'
 import { FEATURE_ID, LAYER_ID, PLACE_ID, GROUP_ID, SYMBOL_ID } from './ids'
-import { all } from '../model/options'
-import { searchIndex } from '../search/lunr'
+import { lunrProvider } from '../search'
 import { readGeometry, readFeature } from './format'
 import selection from '../selection'
 import geometry from './geometry'
 
 export const highlightedFeatures = new Collection()
 
-
 emitter.on(`:id(${LAYER_ID})/open`, async ({ id }) => {
   const layer = await level.value(id)
-
-  const features = async () => {
-    const ids = await level.keys(`feature:${id.split(':')[1]}`)
-    return all(ids)
-  }
-
+  const filter = async refs => (await refs).filter(ref => layerId(ref) === layer.id)
   emitter.emit('search/provider', {
     scope: layer.name,
-    provider: async (query, callback) => callback(await features())
+    provider: lunrProvider('+scope:feature', filter)
   })
 })
 
 emitter.on(`:id(${GROUP_ID})/open`, async ({ id }) => {
   const group = await level.value(id)
-
-  const options = () => {
-    const ids = searchIndex(group.terms)
-      .filter(({ ref }) => !isGroup(ref) && !isSymbol(ref))
-      .map(R.prop('ref'))
-    return all(ids)
-  }
-
+  const filter = async refs => (await refs).filter(item => !isGroup(item.id))
   emitter.emit('search/provider', {
     scope: group.name,
-    provider: async (query, callback) => callback(await options())
+    provider: lunrProvider(group.terms, filter)
   })
 })
 
@@ -80,29 +66,19 @@ emitter.on(':dontcare(.*)/identify/up', () => {
 
 emitter.on(`:id(${FEATURE_ID})/links`, async ({ id }) => {
   const feature = await level.value(id)
-  const links = async () => {
-    const feature = await level.value(id)
-    const links = await all(feature.links || [])
-    return Promise.all(links)
-  }
-
+  const filter = async refs => (await refs).filter(ref => feature.links.includes(ref.id))
   emitter.emit('search/provider', {
     scope: feature.properties.t,
-    provider: async (query, callback) => callback(await links())
+    provider: lunrProvider('+scope:link', filter)
   })
 })
 
 emitter.on(`:id(${LAYER_ID})/links`, async ({ id }) => {
   const layer = await level.value(id)
-  const links = async () => {
-    const layer = await level.value(id)
-    const links = await all(layer.links || [])
-    return Promise.all(links)
-  }
-
+  const filter = async refs => (await refs).filter(ref => layer.links.includes(ref.id))
   emitter.emit('search/provider', {
     scope: layer.name,
-    provider: async (query, callback) => callback(await links())
+    provider: lunrProvider('+scope:link', filter)
   })
 })
 
