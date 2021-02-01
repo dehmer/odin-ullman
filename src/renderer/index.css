@@ -161,7 +161,7 @@ div {
   */
 
   display: grid;
-  grid-gap: 8px;
+  grid-gap: 4px;
 }
 
 .title-label {
@@ -179,7 +179,9 @@ div {
 }
 
 .card-description {
+  display: inline-block;
   font-size: 0.9em;
+  line-height: 16px;
 }
 
 .card-secondary {
