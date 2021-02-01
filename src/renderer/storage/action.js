@@ -4,8 +4,8 @@ import Feature from 'ol/Feature'
 import { getCenter } from 'ol/extent'
 import * as level from './level'
 import emitter from '../emitter'
-import { isGroup, layerId } from './ids'
-import { FEATURE_ID, LAYER_ID, PLACE_ID, GROUP_ID, SYMBOL_ID } from './ids'
+import { isGroup, layerId, isLayer, isFeature } from './ids'
+import { FEATURE_ID, LAYER_ID, PLACE_ID, GROUP_ID, SYMBOL_ID, LINK_ID } from './ids'
 import { lunrProvider } from '../search'
 import { readGeometry, readFeature } from './format'
 import selection from '../selection'
@@ -39,18 +39,28 @@ emitter.on(`:id(${PLACE_ID})/panto`, async ({ id }) => {
   emitter.emit('map/panto', { center, resolution: item.resolution })
 })
 
-emitter.on(`:id(${FEATURE_ID})/panto`, async ({ id }) => {
-  const item = await level.value(id)
-  const geometry = readFeature(item).getGeometry()
+const pantoFeature = async ({ id }) => {
+  const feature = await level.value(id)
+  const geometry = readFeature(feature).getGeometry()
   const center = getCenter(geometry.getExtent())
   emitter.emit('map/panto', { center })
-})
+}
 
-emitter.on(`:id(${LAYER_ID})/panto`, async ({ id }) => {
+const pantoLayer = async ({ id }) => {
   const extent = (await geometry(id)).getExtent()
   const center = getCenter(extent)
   emitter.emit('map/panto', { center })
-})
+}
+
+const pantoLink = async ({ id }) => {
+  const link = await level.value(id)
+  if (isLayer(link.ref)) pantoLayer({ id: link.ref })
+  else if (isFeature(link.ref)) pantoFeature(({ id: link.ref }))
+}
+
+emitter.on(`:id(${FEATURE_ID})/panto`, pantoFeature)
+emitter.on(`:id(${LAYER_ID})/panto`, pantoLayer)
+emitter.on(`:id(${LINK_ID})/panto`, pantoLink)
 
 emitter.on(':id(.*)/identify/down', async ({ id }) => {
   const ids = R.uniq([id, ...selection.selected()])

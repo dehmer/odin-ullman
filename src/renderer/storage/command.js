@@ -277,7 +277,6 @@ emitter.on(`:id(${FEATURE_ID})/links/add`, async ({ id, files }) => {
   const links = files.map(file => ({
     id: `link:${uuid()}`,
     ref: id,
-    container: feature.properties.t,
     name: file.name,
     lastModifiedDate: toMilitaryTime(DateTime.fromJSDate(file.lastModifiedDate)),
     type: file.type
