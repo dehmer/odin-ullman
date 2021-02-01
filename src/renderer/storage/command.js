@@ -345,7 +345,7 @@ emitter.on('storage/features/add', async ({ feature }) => {
   const item = {
     id: featureId(layer.id),
     ...writeFeatureObject(feature),
-    ...meta(feature)
+    ...symbols.meta(feature)
   }
 
   ops.push({ type: 'put', key: item.id, value: item })
