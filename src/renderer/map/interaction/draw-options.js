@@ -29,7 +29,10 @@ export const drawOptions = [
   /* LineString. */
   {
     match: descriptor => descriptor.geometry === GeometryType.LINE_STRING,
-    options: descriptor => ({ type: GeometryType.LINE_STRING, maxPoints: descriptor.parameters.maxPoints })
+    options: descriptor => {
+      const maxPoints = descriptor.parameters && descriptor.parameters.maxPoints
+      return ({ type: GeometryType.LINE_STRING, maxPoints })
+    }
   },
 
   /* GeometryCollection/orbit. */

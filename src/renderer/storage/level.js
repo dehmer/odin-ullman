@@ -58,9 +58,9 @@ const updateProjects = async ops => {
 /**
  *
  */
-export const put = async (item, ops) => {
-  const quiet = ops && ops.quiet
-  const optional = ops && ops.optional
+export const put = async (item, options) => {
+  const quiet = options && options.quiet
+  const optional = options && options.optional
 
   if (isMasterKey(item.id)) await master.put(item.id, item)
   else if (!project) {
@@ -111,10 +111,7 @@ const readProject = options => new Promise((resolve, reject) => {
  *
  */
 export const values = async arg => {
-  if (Array.isArray(arg)) {
-    console.error('[level] deprecated.')
-    return await Promise.all(arg.map(value))
-  }
+  if (Array.isArray(arg)) return await Promise.all(arg.map(value))
   else {
     const prefix = arg
     const options = prefix
@@ -149,13 +146,15 @@ export const keys = async prefix => {
 /**
  *
  */
-export const batch = async ops => {
+export const batch = async (ops, options) => {
+  const quiet = options && options.quiet
+
   const [masterOps, projectOps] = R.partition(op => isMasterKey(op.key), ops)
   if (masterOps.length) await master.batch(masterOps)
   if (projectOps.length) await project.batch(projectOps)
 
   await updateProjects(ops)
-  emitter.emit('storage/batch', { ops })
+  if (!quiet) emitter.emit('storage/batch', { ops })
 }
 
 

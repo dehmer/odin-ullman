@@ -2,8 +2,14 @@ export const fields = [
   {
     id: "field:5dd8f977-087f-477b-86fa-5246b4cd697a",
     label: "Name",
-    property: "Name",
+    property: "name",
     type: "text"
+  },
+  {
+    id: "field:2c97aacf-b639-49fd-af0a-e13c4ad0c038",
+    label: "Comment",
+    property: "comment",
+    type: "textarea"
   },
   {
     id: "field:7884019e-1a39-47ea-a49e-6ec4409aae09",
@@ -59,13 +65,13 @@ export const fields = [
   },
   {
     id: "field:1d75ae52-7ea0-48a5-b461-335839def1b4",
-    label: "Unique Designation (Left)",
+    label: "Unique Designation (left)",
     property: "t",
     type: "text"
   },
   {
     id: "field:5a0902df-7dd1-4fea-8e0f-f54312bc5e2e",
-    label: "Unique Designation (Right)",
+    label: "Unique Designation (right)",
     property: "t1",
     type: "text"
   },
@@ -146,6 +152,17 @@ export const fields = [
     property: 'v',
     type: "text"
   },
+  {
+    id: "field:a923beb5-7d3b-4b82-8b77-efd4c21db00d",
+    label: 'Label Placement',
+    property: 'echelonOffset',
+    type: "slider",
+    options: {
+      min: 0,
+      max: 1,
+      step: 0.01
+    }
+  }
 
 ]
 
@@ -168,6 +185,7 @@ export const selectors = [
       "field:81aedcbd-9154-4d0d-8d32-9aec44b22f28", // Staff Comment
       "field:738a5729-3fc8-4c3a-9686-2aa1964a8831", // Additional Information
       "field:fb7bc60f-d403-456e-9bbf-4036a7883d22", // DTG (w)
+      "field:2c97aacf-b639-49fd-af0a-e13c4ad0c038", // Comment
     ]
   },
   {
@@ -187,6 +205,7 @@ export const selectors = [
       "field:81aedcbd-9154-4d0d-8d32-9aec44b22f28", // Staff Comment
       "field:738a5729-3fc8-4c3a-9686-2aa1964a8831", // Additional Information
       "field:fb7bc60f-d403-456e-9bbf-4036a7883d22", // DTG (w)
+      "field:2c97aacf-b639-49fd-af0a-e13c4ad0c038", // Comment
     ]
   },
   {
@@ -194,10 +213,13 @@ export const selectors = [
     selector: "hierarchy ~= boundaries",
     fields: [
       "field:5dd8f977-087f-477b-86fa-5246b4cd697a", // Name
-      "field:1d75ae52-7ea0-48a5-b461-335839def1b4",
-      "field:5a0902df-7dd1-4fea-8e0f-f54312bc5e2e",
-      "field:93141668-18cf-4ad9-ac92-ae68b8ef4fd3",
-      "field:6c8c45d8-5ce6-4341-8e69-3012a65b02c8"
+      "field:1d75ae52-7ea0-48a5-b461-335839def1b4", // Unique Designation (Left)
+      "field:5a0902df-7dd1-4fea-8e0f-f54312bc5e2e", // Unique Designation (Right)
+      "field:7884019e-1a39-47ea-a49e-6ec4409aae09", // Echelon
+      "field:a923beb5-7d3b-4b82-8b77-efd4c21db00d", // Label Placement
+      "field:93141668-18cf-4ad9-ac92-ae68b8ef4fd3", // Effective (from)
+      "field:6c8c45d8-5ce6-4341-8e69-3012a65b02c8", // Effective (to)
+      "field:2c97aacf-b639-49fd-af0a-e13c4ad0c038", // Comment
     ]
   },
   {
@@ -215,6 +237,7 @@ export const selectors = [
       "field:81aedcbd-9154-4d0d-8d32-9aec44b22f28", // Staff Comment
       "field:738a5729-3fc8-4c3a-9686-2aa1964a8831", // Additional Information
       "field:fb7bc60f-d403-456e-9bbf-4036a7883d22", // DTG (w)
+      "field:2c97aacf-b639-49fd-af0a-e13c4ad0c038", // Comment
     ]
   }
 ]
