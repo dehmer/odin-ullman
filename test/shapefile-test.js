@@ -1,7 +1,8 @@
+import * as R from 'ramda'
 import path from 'path'
 import fs from 'fs'
 import assert from 'assert'
-import { Transform } from 'stream';
+import { Transform } from 'stream'
 import GeoJSON from 'ol/format/GeoJSON'
 import { decode } from '../src/renderer/io/shapefile'
 
@@ -42,7 +43,7 @@ const parse = filename => {
 
   it(`[shp/parse] ${basename}`, function (done) {
     fs.createReadStream(filename)
-      .pipe(decode())
+      .pipe(decode(R.identity))
       .pipe(collect())
       .on('data', data => compareJSON(filename, data))
       .on('finish', () => done())

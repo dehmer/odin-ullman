@@ -4,12 +4,12 @@ import { decoder } from './decoder'
 
 const zipN = (...xs) => [...xs[0]].map((_, i) => xs.map(xs => xs[i]))
 
-const geomNull = { geometry: null }
-const geomPoint = (coordinates, layout) => ({ geometry: new geom.Point(coordinates, layout) })
-const geomMultiPoint = (coordinates, layout) => ({ geometry: new geom.MultiPoint(coordinates, layout) })
-const geomPolygon = (coordinates, layout) => ({ geometry: new geom.Polygon(coordinates, layout) })
-const geomLineString = (coordinates, layout) => ({ geometry: new geom.LineString(coordinates, layout) })
-const geomMultiLineString = (coordinates, layout) => ({ geometry: new geom.MultiLineString(coordinates, layout) })
+const geomNull = recordNumber => ({ recordNumber, geometry: null })
+const geomPoint = (recordNumber, coordinates, layout) => ({ recordNumber, geometry: new geom.Point(coordinates, layout) })
+const geomMultiPoint = (recordNumber, coordinates, layout) => ({ recordNumber, geometry: new geom.MultiPoint(coordinates, layout) })
+const geomPolygon = (recordNumber, coordinates, layout) => ({ recordNumber, geometry: new geom.Polygon(coordinates, layout) })
+const geomLineString = (recordNumber, coordinates, layout) => ({ recordNumber, geometry: new geom.LineString(coordinates, layout) })
+const geomMultiLineString = (recordNumber, coordinates, layout) => ({ recordNumber, geometry: new geom.MultiLineString(coordinates, layout) })
 
 const NULL = 0
 const POINT = 1
@@ -32,7 +32,7 @@ const recordDecoders = {}
 /**
  *
  */
-const fileHeader = (buffer, next) => {
+const fileHeader = (buffer, _, next) => {
   const fileCode = buffer.int32BE()
   buffer.skip(5 * 4)
 
@@ -83,10 +83,10 @@ const decodeValues = (buffer, n) => {
 /**
  *
  */
-const decodePoints = buffer => {
+const decodePoints = (buffer, proj) => {
   buffer.skip(32) // box: ignore (4 x 8)
   const numPoints = buffer.int32LE()
-  const points = R.range(0, numPoints).map(_ => [buffer.doubleLE(), buffer.doubleLE()])
+  const points = R.range(0, numPoints).map(_ => [buffer.doubleLE(), buffer.doubleLE()]).map(proj)
   return { numPoints, points }
 }
 
@@ -94,17 +94,17 @@ const decodePoints = buffer => {
 /**
  *
  */
-const decodeParts = buffer => {
+const decodeParts = (buffer, proj) => {
   buffer.skip(32) // box: ignore (4 x 8)
   const numParts = buffer.int32LE()
   const numPoints = buffer.int32LE()
   const partIndexes = R.range(0, numParts).map(_ => buffer.int32LE()).concat(undefined)
-  const points = R.range(0, numPoints).map(_ => [buffer.doubleLE(), buffer.doubleLE()])
+  const points = R.range(0, numPoints).map(_ => [buffer.doubleLE(), buffer.doubleLE()]).map(proj)
   return { numParts, numPoints, partIndexes, points }
 }
 
-const cps = fn => options => (buffer, next) => {
-  fn(options, buffer, next)
+const cps = fn => options => (buffer, proj, next) => {
+  fn(options, buffer, proj, next)
   const decoder = recordDecoders[options.shapeType]
   if (!decoder) throw new Error(`unsupported shape type: ${options.shapeType}`)
   return decoder
@@ -113,26 +113,26 @@ const cps = fn => options => (buffer, next) => {
 /**
  * POINT, POINT_M, POINT_Z
  */
-const point = cps((options, buffer, next) => {
+const point = cps((options, buffer, proj, next) => {
   const header = recordHeader(buffer)
-  if (header.shapeType === NULL) return next(geomNull)
+  if (header.shapeType === NULL) return next(geomNull(header.recordNumber))
 
   const layout = options.layout === 'XYZM'
     ? header.contentLength === 14 ? 'XYZ' : 'XYZM'
     : options.layout
 
-  const coordinates = R.range(0, layout.length).map(_ => buffer.doubleLE())
-  next(geomPoint(coordinates, layout))
+  const coordinates = R.range(0, layout.length).map(_ => buffer.doubleLE()).map(proj)
+  next(geomPoint(header.recordNumber, coordinates, layout))
 })
 
 
 /**
  * MULTIPOINT
  */
-const multipoint = cps((options, buffer, next) => {
+const multipoint = cps((options, buffer, proj, next) => {
   const header = recordHeader(buffer)
-  if (header.shapeType === NULL) return next(geomNull)
-  const { numPoints, points } = decodePoints(buffer)
+  if (header.shapeType === NULL) return next(geomNull(header.recordNumber))
+  const { numPoints, points } = decodePoints(buffer, proj)
 
   const coordinates = R.cond([
     [R.equals('XY'), () => points],
@@ -141,18 +141,18 @@ const multipoint = cps((options, buffer, next) => {
     }]
   ])(options.layout)
 
-  next(geomMultiPoint(coordinates, options.layout))
+  next(geomMultiPoint(header.recordNumber, coordinates, options.layout))
 })
 
 
 /**
  * POLYGON, POLYGON_M
  */
-const polygon = cps((options, buffer, next) => {
+const polygon = cps((options, buffer, proj, next) => {
   const header = recordHeader(buffer)
-  if (header.shapeType === NULL) return next(geomNull)
+  if (header.shapeType === NULL) return next(geomNull(header.recordNumber))
 
-  const { numPoints, partIndexes, points } = decodeParts(buffer)
+  const { numPoints, partIndexes, points } = decodeParts(buffer, proj)
   const rings = points => R.aperture(2, partIndexes).map(([start, end]) => points.slice(start, end))
 
   const coordinates = R.cond([
@@ -162,18 +162,18 @@ const polygon = cps((options, buffer, next) => {
     }]
   ])(options.layout)
 
-  next(geomPolygon(coordinates, options.layout))
+  next(geomPolygon(header.recordNumber, coordinates, options.layout))
 })
 
 
 /**
  * POLYLINE, POLYLINE_M, POLYLINE_Z
  */
-const polyline = cps((options, buffer, next) => {
+const polyline = cps((options, buffer, proj, next) => {
   const header = recordHeader(buffer)
-  if (header.shapeType === NULL) return next(geomNull)
+  if (header.shapeType === NULL) return next(geomNull(header.recordNumber))
 
-  const { numParts, numPoints, partIndexes, points } = decodeParts(buffer)
+  const { numParts, numPoints, partIndexes, points } = decodeParts(buffer, proj)
   const strings = points => R.aperture(2, partIndexes).map(([start, end]) => points.slice(start, end))
 
   // Measure is optional.
@@ -201,8 +201,8 @@ const polyline = cps((options, buffer, next) => {
 
   const coordinates = zipN(...arrays).map(xs => [].concat(...xs))
   const geometry = numParts === 1
-    ? geomLineString(coordinates, layout)
-    : geomMultiLineString(strings(coordinates), layout)
+    ? geomLineString(header.recordNumber, coordinates, layout)
+    : geomMultiLineString(header.recordNumber, strings(coordinates), layout)
 
   next(geometry)
 })
@@ -218,7 +218,7 @@ recordDecoders[POINT_M] = point({ shapeType: POINT_M, layout: 'XYM' })
 recordDecoders[POLYGON_M] = polygon({ shapeType: POLYGON_M, layout: 'XYM' })
 recordDecoders[MULTIPOINT_M] = multipoint({ shapeType: MULTIPOINT_M, layout: 'XYM' })
 
-export const decode = () => {
+export const decode = proj => {
   var fn = fileHeader
-  return decoder((acc, next) => (fn = fn(acc, next)))
+  return decoder((acc, next) => (fn = fn(acc, proj, next)))
 }
