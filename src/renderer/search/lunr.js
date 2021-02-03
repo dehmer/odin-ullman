@@ -1,5 +1,6 @@
 import * as R from 'ramda'
 import lunr from 'lunr'
+import debounce from 'lodash.debounce'
 import emitter from '../emitter'
 import * as level from '../storage/level'
 import { documents } from '../model/documents'
@@ -46,7 +47,7 @@ const index = (name, scopes) => {
   }
 
   return {
-    refresh,
+    refresh: debounce(refresh, 200),
     search: R.tryCatch(
       terms => terms.trim() ? index.search(terms.trim()) : [],
       R.always([])
