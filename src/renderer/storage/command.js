@@ -40,11 +40,10 @@ emitter.on('layers/import', async ({ layers }) => {
     delete layer.type
     acc.push({ type: 'put', key: layer.id, value: layer })
 
-    const ops = features
+    features
       .map(feature => ({ id: featureId(layer.id), ...feature, ...symbols.meta(feature) }))
-      .map(value => ({ type: 'put', key: value.id, value }))
+      .forEach(value => acc.push({ type: 'put', key: value.id, value }))
 
-    acc.push(...ops)
     return acc
   }, ops)
 
