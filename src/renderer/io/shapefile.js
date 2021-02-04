@@ -92,19 +92,6 @@ const decodePoints = (buffer, proj) => {
 
 
 /**
- *
- */
-const decodeParts = (buffer, proj) => {
-  buffer.skip(32) // box: ignore (4 x 8)
-  const numParts = buffer.int32LE()
-  const numPoints = buffer.int32LE()
-  const partIndexes = R.range(0, numParts).map(_ => buffer.int32LE()).concat(undefined)
-  const points = R.range(0, numPoints).map(_ => [buffer.doubleLE(), buffer.doubleLE()]).map(proj)
-  return { numParts, numPoints, partIndexes, points }
-}
-
-
-/**
  * POINT, POINT_M, POINT_Z
  */
 const point = options => (buffer, proj, next) => {
@@ -140,35 +127,14 @@ const multipoint = options => (buffer, proj, next) => {
 
 
 /**
- * POLYGON, POLYGON_M
+ *
  */
-const polygon = options => (buffer, proj, next) => {
-  const header = recordHeader(buffer)
-  if (header.shapeType === NULL) return next(geomNull(header.recordNumber))
-
-  const { numPoints, partIndexes, points } = decodeParts(buffer, proj)
-  const rings = points => R.aperture(2, partIndexes).map(([start, end]) => points.slice(start, end))
-
-  const coordinates = R.cond([
-    [R.equals('XY'), () => rings(points)],
-    [R.equals('XYM'), () => {
-      return rings(zipN(points, decodeValues(buffer, numPoints)).map(xs => [].concat(...xs)))
-    }]
-  ])(options.layout)
-
-  next(geomPolygon(header.recordNumber, coordinates, options.layout))
-}
-
-
-/**
- * POLYLINE, POLYLINE_M, POLYLINE_Z
- */
-const polyline = options => (buffer, proj, next) => {
-  const header = recordHeader(buffer)
-  if (header.shapeType === NULL) return next(geomNull(header.recordNumber))
-
-  const { numParts, numPoints, partIndexes, points } = decodeParts(buffer, proj)
-  const strings = points => R.aperture(2, partIndexes).map(([start, end]) => points.slice(start, end))
+const decodeParts = (layout, header, buffer, proj) => {
+  buffer.skip(32) // box: ignore (4 x 8)
+  const numParts = buffer.int32LE()
+  const numPoints = buffer.int32LE()
+  const partIndexes = R.range(0, numParts).map(_ => buffer.int32LE()).concat(undefined)
+  const points = R.range(0, numPoints).map(_ => [buffer.doubleLE(), buffer.doubleLE()]).map(proj)
 
   // Measure is optional.
   // Read only if z offset is greater than content length;
@@ -176,9 +142,9 @@ const polyline = options => (buffer, proj, next) => {
   const x = 44 + (4 * numParts)
   const y = x + (16 * numPoints)
   const z = y + 16 + (8 * numPoints)
-  const layout = options.layout === 'XYZM'
+  const actualLayout = layout === 'XYZM'
     ? z === (header.contentLength * 2) ? 'XYZ' : 'XYZM'
-    : options.layout
+    : layout
 
   // Read M and/or Z values (ignore range).
   const doubleLE = () => {
@@ -191,12 +157,42 @@ const polyline = options => (buffer, proj, next) => {
     [R.equals('XYM'), () => [points, doubleLE()]],
     [R.equals('XYZ'), () => [points, doubleLE()]],
     [R.equals('XYZM'), () => [points, doubleLE(), doubleLE()]]
-  ])(layout)
+  ])(actualLayout)
 
-  const coordinates = zipN(...arrays).map(xs => [].concat(...xs))
+  return {
+    layout: actualLayout,
+    numParts,
+    partIndexes,
+    points: zipN(...arrays).map(xs => [].concat(...xs))
+  }
+}
+
+
+/**
+ * POLYGON, POLYGON_M
+ */
+const polygon = options => (buffer, proj, next) => {
+  const header = recordHeader(buffer)
+  if (header.shapeType === NULL) return next(geomNull(header.recordNumber))
+
+  const { partIndexes, points } = decodeParts(options.layout, header, buffer, proj)
+  const rings = points => R.aperture(2, partIndexes).map(([start, end]) => points.slice(start, end))
+  next(geomPolygon(header.recordNumber, rings(points), options.layout))
+}
+
+
+/**
+ * POLYLINE, POLYLINE_M, POLYLINE_Z
+ */
+const polyline = options => (buffer, proj, next) => {
+  const header = recordHeader(buffer)
+  if (header.shapeType === NULL) return next(geomNull(header.recordNumber))
+
+  const { numParts, partIndexes, points, layout } = decodeParts(options.layout, header, buffer, proj)
+  const strings = points => R.aperture(2, partIndexes).map(([start, end]) => points.slice(start, end))
   const geometry = numParts === 1
-    ? geomLineString(header.recordNumber, coordinates, layout)
-    : geomMultiLineString(header.recordNumber, strings(coordinates), layout)
+    ? geomLineString(header.recordNumber, points, layout)
+    : geomMultiLineString(header.recordNumber, strings(points), layout)
 
   next(geometry)
 }
