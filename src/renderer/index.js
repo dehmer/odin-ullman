@@ -53,8 +53,6 @@ map.addEventListener('drop', async event => {
   event.stopPropagation()
 
   const files = [...event.dataTransfer.files]
-  console.log(files)
-
   const zip = files.filter(file => file.name.endsWith('.zip'))
   const json = files.filter(file => file.name.endsWith('.json'))
 
