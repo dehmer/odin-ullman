@@ -53,13 +53,15 @@ map.addEventListener('drop', async event => {
   event.stopPropagation()
 
   const files = [...event.dataTransfer.files]
-  const zip = files.filter(file => file.name.endsWith('.zip'))
-  const json = files.filter(file => file.name.endsWith('.json'))
+  const zip = files.filter(file => file.name.toLowerCase().endsWith('.zip'))
 
   zip.forEach(file => loadShapefile(file.path, layer => {
     emitter.emit('layers/import', ({ layers: [layer] }))
   }))
 
-  const layers = await loadLayerFiles(json)
-  emitter.emit('layers/import', ({ layers }))
+  const json = files.filter(file => file.name.toLowerCase().endsWith('.json'))
+  if (json.length) {
+    const layers = await loadLayerFiles(json)
+    emitter.emit('layers/import', ({ layers }))
+  }
 }, false)

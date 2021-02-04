@@ -103,17 +103,11 @@ const decodeParts = (buffer, proj) => {
   return { numParts, numPoints, partIndexes, points }
 }
 
-const cps = fn => options => (buffer, proj, next) => {
-  fn(options, buffer, proj, next)
-  const decoder = recordDecoders[options.shapeType]
-  if (!decoder) throw new Error(`unsupported shape type: ${options.shapeType}`)
-  return decoder
-}
 
 /**
  * POINT, POINT_M, POINT_Z
  */
-const point = cps((options, buffer, proj, next) => {
+const point = options => (buffer, proj, next) => {
   const header = recordHeader(buffer)
   if (header.shapeType === NULL) return next(geomNull(header.recordNumber))
 
@@ -123,13 +117,13 @@ const point = cps((options, buffer, proj, next) => {
 
   const coordinates = proj(R.range(0, layout.length).map(_ => buffer.doubleLE()))
   next(geomPoint(header.recordNumber, coordinates, layout))
-})
+}
 
 
 /**
  * MULTIPOINT
  */
-const multipoint = cps((options, buffer, proj, next) => {
+const multipoint = options => (buffer, proj, next) => {
   const header = recordHeader(buffer)
   if (header.shapeType === NULL) return next(geomNull(header.recordNumber))
   const { numPoints, points } = decodePoints(buffer, proj)
@@ -142,13 +136,13 @@ const multipoint = cps((options, buffer, proj, next) => {
   ])(options.layout)
 
   next(geomMultiPoint(header.recordNumber, coordinates, options.layout))
-})
+}
 
 
 /**
  * POLYGON, POLYGON_M
  */
-const polygon = cps((options, buffer, proj, next) => {
+const polygon = options => (buffer, proj, next) => {
   const header = recordHeader(buffer)
   if (header.shapeType === NULL) return next(geomNull(header.recordNumber))
 
@@ -163,13 +157,13 @@ const polygon = cps((options, buffer, proj, next) => {
   ])(options.layout)
 
   next(geomPolygon(header.recordNumber, coordinates, options.layout))
-})
+}
 
 
 /**
  * POLYLINE, POLYLINE_M, POLYLINE_Z
  */
-const polyline = cps((options, buffer, proj, next) => {
+const polyline = options => (buffer, proj, next) => {
   const header = recordHeader(buffer)
   if (header.shapeType === NULL) return next(geomNull(header.recordNumber))
 
@@ -205,7 +199,7 @@ const polyline = cps((options, buffer, proj, next) => {
     : geomMultiLineString(header.recordNumber, strings(coordinates), layout)
 
   next(geometry)
-})
+}
 
 recordDecoders[POINT] = point({ shapeType: POINT, layout: 'XY' })
 recordDecoders[POLYLINE] = polyline({ shapeType: POLYLINE, layout: 'XY' })
@@ -220,5 +214,5 @@ recordDecoders[MULTIPOINT_M] = multipoint({ shapeType: MULTIPOINT_M, layout: 'XY
 
 export const decode = proj => {
   var fn = fileHeader
-  return decoder((acc, next) => (fn = fn(acc, proj, next)))
+  return decoder((acc, next) => (fn = fn(acc, proj, next) || fn))
 }
