@@ -4,6 +4,7 @@ import unzipper from 'unzipper'
 import { Transform } from 'stream'
 import { GeoJSON } from 'ol/format'
 import proj4 from 'proj4'
+import iconv from 'iconv-lite'
 import { decode as decodeDBF } from './dbase'
 import { decode as decodeSHP } from './shapefile'
 
@@ -69,11 +70,21 @@ export const loadShapefile = async (filename, callback) => {
 
   Object.entries(groups(files)).forEach(async ([name, files]) => {
     const find = extname => files.find(file => path.extname(file.path) === extname)
+    const cpg = await (find('.cpg') && asString(find('.cpg').stream()))
+
+    const encoding = iconv.encodingExists(cpg)
+      ? cpg
+      : cpg && cpg.length > 5 && iconv.encodingExists(cpg.slice(5))
+        ? cpg.slice(5)
+        : null
+
+    const toString = encoding
+      ? (buffer => iconv.decode(buffer, encoding).replace(/\0/g, '').trim())
+      : (buffer => buffer.toString().replace(/\0/g, '').trim())
+
     const prj = await (find('.prj') && asString(find('.prj').stream()))
     const proj = proj4(prj)
 
-    // TODO: replace with iconv
-    const toString = buffer => buffer.toString().replace(/\0/g, '').trim()
     const dbf = await find('.dbf').buffer()
     const records = decodeDBF(dbf, toString)
 
