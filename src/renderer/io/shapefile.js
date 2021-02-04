@@ -121,7 +121,7 @@ const point = cps((options, buffer, proj, next) => {
     ? header.contentLength === 14 ? 'XYZ' : 'XYZM'
     : options.layout
 
-  const coordinates = R.range(0, layout.length).map(_ => buffer.doubleLE()).map(proj)
+  const coordinates = proj(R.range(0, layout.length).map(_ => buffer.doubleLE()))
   next(geomPoint(header.recordNumber, coordinates, layout))
 })
 
