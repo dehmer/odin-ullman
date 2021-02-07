@@ -2,11 +2,17 @@ TODO
 - web worker: persistence/FTS index
 - search navigation (previous/next)
 - preferences/properties
-- FTS: debounce re-indexing
 - list: virtualize/windowing
 - spotlight/Windows: ctrl-click (selection)
-- ghosted features
+- ghosted features (panto/hidden)
+- move project database to main
+- separate storage: geometries/properties
+- list animations: add, remove
+- try minisearch
+- shapefile: implicit form
+- forms: choose title/description fields (FTS/Spotlight)
 
 DONE
 - FTS: dedicated index for symbols
 - spotlight/Windows: support DELETE key
+- FTS: debounce re-indexing
