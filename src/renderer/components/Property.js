@@ -5,11 +5,12 @@ import { Select } from 'antd'
 import { Checkbox } from 'antd'
 import { Button } from 'antd'
 import { Radio } from 'antd'
+import { Slider } from 'antd'
 import emitter from '../emitter'
 
 const { Option } = Select
 
-const Text = React.memo(props => {
+const TextProperty = React.memo(props => {
   const [value, setValue] = React.useState(props.value || '')
 
   const handleChange = ({ target }) => setValue(target.value)
@@ -31,7 +32,7 @@ const Text = React.memo(props => {
   />
 })
 
-const ComboBox = React.memo(props => {
+const SelectProperty = React.memo(props => {
   const [value, setValue] = React.useState(props.value || '')
 
   const handleChange = (value) => {
@@ -60,7 +61,7 @@ const ComboBox = React.memo(props => {
   </Input.Group>
 })
 
-const Identity = React.memo(props => {
+const IdentityProperty = React.memo(props => {
 
   // P-PENDING         G-EXCERCISE
   // U-UNKNOWN         W-EXCERCISE
@@ -141,7 +142,7 @@ const Identity = React.memo(props => {
   </Input.Group>
 })
 
-const Modifiers = props => {
+const ModifiersProperty = props => {
 
   const decode = value => {
     switch (value) {
@@ -198,7 +199,7 @@ const Modifiers = props => {
 /**
  * Reinforced/reduced.
  */
-const Assignment = props => {
+const AssignmentProperty = props => {
 
   const [value, setValue] = React.useState(props.value)
 
@@ -226,7 +227,7 @@ const Assignment = props => {
 /**
  * Mobility Indicator
  */
-const Mobility = props => {
+const MobilityProperty = props => {
   const [value, setValue] = React.useState(props.value)
 
   const handleChange = value => {
@@ -266,7 +267,7 @@ const Mobility = props => {
   </Input.Group>
 }
 
-const Status = props => {
+const StatusProperty = props => {
 
   const [value, setValue] = React.useState(props.value)
 
@@ -292,8 +293,7 @@ const Status = props => {
 /**
  *
  */
-const OperationalCondition = props => {
-
+const OperationalConditionProperty = props => {
   const [value, setValue] = React.useState(props.value)
 
   const handleChange = value => {
@@ -323,18 +323,78 @@ const OperationalCondition = props => {
   </Input.Group>
 }
 
+const TextAreaProperty = props => {
+  const [value, setValue] = React.useState(props.value)
+
+  const handleChange = ({ target }) => {
+    setValue(target.value)
+  }
+
+  const handleBlur = () => {
+    emitter.emit(`${props.id}/update`, {
+      ids: props.ids,
+      property: props.property,
+      value
+    })
+  }
+
+  return <Input.Group compact>
+    <Input
+      disabled
+      value={props.label}
+      style={{ width: '100%', color: 'rgba(0, 0, 0, 0.85)', cursor: 'auto', backgroundColor: '#fafafa' }}
+    />
+    <Input.TextArea
+      defaultValue={value}
+      rows={4}
+      onChange={handleChange}
+      onBlur={handleBlur}
+    />
+  </Input.Group>
+}
+
+const SliderProperty = props => {
+  const [value, setValue] = React.useState(props.value || ((props.max - props.min) / 2))
+  const handleChange = value => {
+    setValue(value)
+    emitter.emit(`${props.id}/update`, {
+      ids: props.ids,
+      property: props.property,
+      value
+    })
+  }
+
+  return <Input.Group compact>
+    <Input
+      disabled
+      value={props.label}
+      style={{ width: '100%', color: 'rgba(0, 0, 0, 0.85)', cursor: 'auto', backgroundColor: '#fafafa' }}
+    />
+    <Slider
+      style={{ width: '96%'  }}
+      value={value}
+      min={props.options.min}
+      max={props.options.max}
+      step={props.options.step}
+      onChange={handleChange}
+    />
+  </Input.Group>
+}
+
 const Property = props => {
   const component = (type => {
     switch (type) {
-      case 'text': return <Text {...props}/>
-      case 'select': return <ComboBox {...props}/>
-      case 'identity': return <Identity {...props}/>
-      case 'modifiers': return <Modifiers {...props}/>
-      case 'assignment': return <Assignment {...props}/>
-      case 'mobility': return <Mobility {...props}/>
-      case 'status': return <Status {...props}/>
-      case 'opcon': return <OperationalCondition {...props}/>
-      default: return <Text {...props}/>
+      case 'text': return <TextProperty {...props}/>
+      case 'select': return <SelectProperty {...props}/>
+      case 'identity': return <IdentityProperty {...props}/>
+      case 'modifiers': return <ModifiersProperty {...props}/>
+      case 'assignment': return <AssignmentProperty {...props}/>
+      case 'mobility': return <MobilityProperty {...props}/>
+      case 'status': return <StatusProperty {...props}/>
+      case 'opcon': return <OperationalConditionProperty {...props}/>
+      case 'textarea': return <TextAreaProperty {...props}/>
+      case 'slider': return <SliderProperty {...props}/>
+      default: return <TextProperty {...props}/>
     }
   })(props.type)
 

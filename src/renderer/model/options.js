@@ -2,7 +2,7 @@ import * as R from 'ramda'
 import * as level from '../storage/level'
 import { url } from '../storage/symbols'
 import { searchIndex } from '../search/lunr'
-import { layerId } from '../storage/ids'
+import { layerId, isLayer } from '../storage/ids'
 
 
 export const options = {}
@@ -160,7 +160,8 @@ options.place = place => {
 /**
  * link:
  */
-options.link = link => {
+options.link = async (link, cache) => {
+
   const path = type => {
     switch (type) {
       case 'application/pdf': return 'mdiAdobeAcrobat'
@@ -171,16 +172,22 @@ options.link = link => {
     }
   }
 
+  const container = await cache(link.ref)
+  const containerName = isLayer(link.ref)
+    ? container.name
+    : container.properties.t
+
   return {
     id: link.id,
-    title: link.name + ' ⏤ ' + link.container,
+    title: link.name + ' ⏤ ' + containerName,
     description: link.lastModifiedDate,
     path: path(link.type),
     tags: [
       'SCOPE:LINK:NONE',
       ...(link.tags || []).map(label => `USER:${label}:NONE`)
     ].join(' '),
-    capabilities: 'TAG'
+    capabilities: 'TAG',
+    actions: 'PRIMARY:panto'
   }
 }
 

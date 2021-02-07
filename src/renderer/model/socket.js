@@ -108,7 +108,7 @@ setInterval(async () => {
  */
 emitter.on('storage/put', ({ key, value }) => {
   if (!isLayer(key)) return
-  if (value.type !== 'socket') return
+  if (!value || value.type !== 'socket') return
 
   if (value.active) {
     sockets[key] = socket(key, value.url)

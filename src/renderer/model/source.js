@@ -3,7 +3,7 @@ import Feature from 'ol/Feature'
 import VectorSource from 'ol/source/Vector'
 import uuid from 'uuid-random'
 import * as level from '../storage/level'
-import { featureId, isFeature } from '../storage/ids'
+import { featureId, layerId, isFeature, isLayer } from '../storage/ids'
 import emitter from '../emitter'
 import selection from '../selection'
 import { readFeature, writeFeaturesObject } from '../storage/format'
@@ -66,6 +66,22 @@ emitter.on('storage/put', ({ key, value }) => {
   if (!isFeature(key)) return
   removeFeature(value)
   addFeature(value)
+})
+
+/**
+ *
+ */
+emitter.on('layer/refresh', async ({ id }) => {
+  if (!isLayer(id)) return
+  source.getFeatures()
+    .filter(feature => layerId(feature.getId()) === id)
+    .forEach(feature => source.removeFeature(feature))
+
+  const features = (await level.values('feature:'))
+    .filter(feature => layerId(feature.id) === id)
+    .filter(isVisible)
+
+  addFeatures(features.map(readFeature))
 })
 
 

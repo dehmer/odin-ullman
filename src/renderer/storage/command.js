@@ -40,11 +40,10 @@ emitter.on('layers/import', async ({ layers }) => {
     delete layer.type
     acc.push({ type: 'put', key: layer.id, value: layer })
 
-    const ops = features
+    features
       .map(feature => ({ id: featureId(layer.id), ...feature, ...symbols.meta(feature) }))
-      .map(value => ({ type: 'put', key: value.id, value }))
+      .forEach(value => acc.push({ type: 'put', key: value.id, value }))
 
-    acc.push(...ops)
     return acc
   }, ops)
 
@@ -277,7 +276,6 @@ emitter.on(`:id(${FEATURE_ID})/links/add`, async ({ id, files }) => {
   const links = files.map(file => ({
     id: `link:${uuid()}`,
     ref: id,
-    container: feature.properties.t,
     name: file.name,
     lastModifiedDate: toMilitaryTime(DateTime.fromJSDate(file.lastModifiedDate)),
     type: file.type
@@ -346,7 +344,7 @@ emitter.on('storage/features/add', async ({ feature }) => {
   const item = {
     id: featureId(layer.id),
     ...writeFeatureObject(feature),
-    ...meta(feature)
+    ...symbols.meta(feature)
   }
 
   ops.push({ type: 'put', key: item.id, value: item })

@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom'
 import Mousetrap from 'mousetrap'
 import './index.css'
 import { App } from './components/App'
-import { loadLayerFiles } from './model/io'
+import { loadLayerFiles, loadShapefile } from './io'
 import './storage/command'
 import './storage/action'
 import './model/properties'
@@ -46,9 +46,20 @@ map.addEventListener('dragover', event => {
   event.stopPropagation()
 }, false)
 
+
+
 map.addEventListener('drop', async event => {
   event.preventDefault()
   event.stopPropagation()
-  const layers = await loadLayerFiles([...event.dataTransfer.files])
-  emitter.emit('layers/import', ({ layers }))
+
+  const files = [...event.dataTransfer.files]
+  const zip = files.filter(file => file.name.toLowerCase().endsWith('.zip'))
+
+  zip.map(file => loadShapefile(file.path))
+
+  const json = files.filter(file => file.name.toLowerCase().endsWith('.json'))
+  if (json.length) {
+    const layers = await loadLayerFiles(json)
+    emitter.emit('layers/import', ({ layers }))
+  }
 }, false)
