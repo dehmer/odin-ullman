@@ -11,6 +11,8 @@ TODO
 - try minisearch
 - shapefile: implicit form
 - forms: choose title/description fields (FTS/Spotlight)
+- source: local, shapefile, socket, PostGIS, GeoPackage
+- Spotlight: Optimistic UI
 
 DONE
 - FTS: dedicated index for symbols
