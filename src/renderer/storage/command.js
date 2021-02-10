@@ -2,6 +2,7 @@ import * as R from 'ramda'
 import uuid from 'uuid-random'
 import * as geom from 'ol/geom'
 import DateTime from 'luxon/src/datetime'
+import { ipcRenderer } from 'electron'
 import * as level from './level'
 import { layerId, featureId } from './ids'
 import { isLayer, isFeature, isGroup, isSymbol, isPlace, isLink } from './ids'
@@ -425,19 +426,7 @@ emitter.on('storage/layer', async () => {
  *
  */
 emitter.on(`:id(${PROJECT_ID})/open`, async ({ id }) => {
-  const project = await level.value(id)
-  if (project.open) return
-
-  const isOpen = project => project.open
-  const projects = (await level.values('project:')).filter(isOpen)
-  const ops = projects.reduce((acc, project) => {
-    delete project.open
-    acc.push({ type: 'put', key: project.id, value: project })
-    return acc
-  }, [])
-
-  ops.push({ type: 'put', key: id, value: { ...project, open: true }})
-  level.batch(ops)
+  ipcRenderer.send('ipc.command.project.open', id)
 })
 
 

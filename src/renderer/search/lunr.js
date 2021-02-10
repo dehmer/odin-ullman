@@ -62,6 +62,7 @@ const indexes = [
 
 emitter.on('storage/batch', ({ ops }) => indexes.forEach(index => index.refresh(ops)))
 emitter.on('storage/put', ({ key, value }) => indexes.forEach(index => index.refresh([{ type: 'put', key, value }])))
+emitter.on('project/open', () => indexes.forEach(index => index.refresh()))
 
 export const searchIndex = terms => indexes.
   reduce((acc, index) => acc.concat(index.search(terms)), [])

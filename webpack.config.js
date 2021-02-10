@@ -56,8 +56,7 @@ const rendererConfig = (env, argv) => ({
 
   plugins: [
     new HtmlWebpackPlugin({ title: 'ODIN - C2IS' }),
-    new webpack.IgnorePlugin(/^pg-native$/),
-    new webpack.ExternalsPlugin("commonjs", ['leveldown'])
+    new webpack.ExternalsPlugin('commonjs', ['leveldown'])
   ]
 })
 
@@ -68,7 +67,12 @@ const mainConfig = (env, argv) => ({
   stats: 'errors-only',
   entry: {
     main: './main.js'
-  }
+  },
+
+  plugins: [
+    // NOTE: Required. Else "Error: No native build was found for ..."
+    new webpack.ExternalsPlugin('commonjs', ['leveldown'])
+  ]
 })
 
 const devServer = env => {

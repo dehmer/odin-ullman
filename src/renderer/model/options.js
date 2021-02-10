@@ -216,10 +216,11 @@ function memoize(method) {
   }
 }
 
-export const all = (ids, cache = memoize(level.value)) => {
-  return ids.reduce(async (accp, id) => {
+export const all = async (ids, cache = memoize(level.value)) => {
+  const items = await level.values(ids)
+
+  return items.reduce(async (accp, item) => {
     const acc = await accp
-    const item = await cache(id)
     const option = await options[item.id.split(':')[0]](item, cache)
     acc.push(option)
     return acc
