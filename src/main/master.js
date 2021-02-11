@@ -1,15 +1,22 @@
 import os from 'os'
 import path from 'path'
 import url from 'url'
+import fs from 'fs'
 import { app, BrowserWindow, ipcMain } from 'electron'
 import levelup from 'levelup'
 import leveldown from 'leveldown'
 import encoding from 'encoding-down'
 import * as R from 'ramda'
+import uuid from 'uuid-random'
 
 const userData = app.getPath('userData')
 const databases = path.join(userData, 'databases')
 const filename = path.join(databases, 'master')
+
+fs.mkdir(databases, function(err) {
+  if (err && err.code !== 'EEXIST') console.error(err)
+})
+
 const master = levelup(encoding(leveldown(filename), { valueEncoding: 'json' }))
 
 
@@ -112,97 +119,116 @@ const createWindow = async ({ id }) => {
   window.show()
 }
 
+// /**
+//  *
+//  */
+// const importProjects = async projects => {
+//   const USER_HOME = os.homedir()
+//   const ODIN_HOME = path.join(USER_HOME, 'ODIN')
+//   const PROJECTS = path.join(ODIN_HOME, 'projects')
 
-export const open = async () => {
+//   // Only import once:
+//   const imports = await values('import:')
+//   if (imports.find(x => x.path === USER_HOME)) return
+//   await put({ id: `import:${uuid()}`, path: USER_HOME}, { quiet: true })
+
+//   const readLayers = project => new Promise((resolve, reject) => {
+//     fs.readdir(path.join(PROJECTS, project, 'layers'), { withFileTypes: true }, (err, files) => {
+//       if (err) return reject(err)
+//       resolve(files
+//         .filter(dirent => dirent.isFile())
+//         .filter(dirent => dirent.name.endsWith('.json'))
+//         .map(dirent => dirent.name)
+//         .map(layer => path.join(PROJECTS, project, 'layers', layer))
+//         .map(layer => {
+//           const json = JSON.parse(fs.readFileSync(layer, 'utf8'))
+//           json.name = path.basename(layer, '.json')
+//           return json
+//         })
+//         .map(R.tap(layer => layer.id = `layer:${uuid()}`))
+//         .map(layer => {
+//           layer.features = layer.features.map(feature => {
+//             delete feature.id
+//             delete feature.properties.layerId
+//             if (feature.properties.locked) { feature.locked = true;  delete feature.properties.locked }
+//             if (feature.properties.hidden) { feature.hidden = true; delete feature.properties.hidden }
+//             return {
+//               id: `feature:${layer.id.split(':')[1]}/${uuid()}`,
+//               ...feature,
+//               ...symbols.meta(feature)
+//             }
+//           })
+
+//           return layer
+//         })
+//       )
+//     })
+//   })
+
+//   const readProjects = () => new Promise((resolve, reject) => {
+//     const uuidPattern = /^[a-f\d]{8}-[a-f\d]{4}-4[a-f\d]{3}-[89AB][a-f\d]{3}-[a-f\d]{12}$/i
+//     fs.readdir(PROJECTS, { withFileTypes: true }, (err, files) => {
+//       if (err) return reject(err)
+//       resolve(files
+//         .filter(dirent => dirent.isDirectory())
+//         .filter(dirent => uuidPattern.test(dirent.name))
+//         .map(dirent => dirent.name)
+//         .filter(name => !projects.find(({ id }) => id.includes(name)))
+//       )
+//     })
+//   })
+
+//   readProjects().then(projects => projects.map(async project => {
+//     const filename = path.join(databases, project)
+//     const db = levelup(encoding(leveldown(filename), { valueEncoding: 'json' }))
+//     const layers = await readLayers(project)
+//     const ops = layers.reduce((acc, layer) => {
+//       acc.push({ type: 'put', key: layer.id, value: layer })
+//       layer.features.reduce((acc, feature) => {
+//         acc.push({ type: 'put', key: feature.id, value: feature })
+//         return acc
+//       }, acc)
+//       return acc
+//     }, [])
+//     await db.batch(ops)
+//     await db.close()
+//   }))
+
+//   await (async () => {
+//     const projects = await readProjects()
+//     const ps = projects.map(async project => {
+//       const meta = JSON.parse(fs.readFileSync(path.join(PROJECTS, project, 'metadata.json'), 'utf8'))
+//       const id = `project:${project}`
+//       return { type: 'put', key: id, value: { ...meta, id } }
+//     })
+//     const ops = await Promise.all(ps)
+//     await master.batch(ops)
+//   })()
+// }
+
+const loadProjects = async () => {
   const options = { keys: false, values: true, gte: 'project:', lte: 'project:' + '\xff' }
   const projects = await readMaster(options)
-  const openProjects = projects.filter(project => project.open)
-  if (openProjects.length) openProjects.forEach(createWindow)
-  else R.take(1, projects).forEach(createWindow)
+
+  if (projects.length) return projects
+
+  // Create new/open project:
+  const project = {
+    id: `project:${uuid()}`,
+    name: 'Untitled Project',
+    open: true
+  }
+
+  await put(project)
+  return [project]
 }
 
 /**
  *
  */
-const importProjects = async projects => {
-  const USER_HOME = os.homedir()
-  const ODIN_HOME = path.join(USER_HOME, 'ODIN')
-  const PROJECTS = path.join(ODIN_HOME, 'projects')
-
-  // Only import once:
-  const imports = await values('import:')
-  if (imports.find(x => x.path === USER_HOME)) return
-  await put({ id: `import:${uuid()}`, path: USER_HOME}, { quiet: true })
-
-  const readLayers = project => new Promise((resolve, reject) => {
-    fs.readdir(path.join(PROJECTS, project, 'layers'), { withFileTypes: true }, (err, files) => {
-      if (err) return reject(err)
-      resolve(files
-        .filter(dirent => dirent.isFile())
-        .filter(dirent => dirent.name.endsWith('.json'))
-        .map(dirent => dirent.name)
-        .map(layer => path.join(PROJECTS, project, 'layers', layer))
-        .map(layer => {
-          const json = JSON.parse(fs.readFileSync(layer, 'utf8'))
-          json.name = path.basename(layer, '.json')
-          return json
-        })
-        .map(R.tap(layer => layer.id = `layer:${uuid()}`))
-        .map(layer => {
-          layer.features = layer.features.map(feature => {
-            delete feature.id
-            delete feature.properties.layerId
-            if (feature.properties.locked) { feature.locked = true;  delete feature.properties.locked }
-            if (feature.properties.hidden) { feature.hidden = true; delete feature.properties.hidden }
-            return {
-              id: `feature:${layer.id.split(':')[1]}/${uuid()}`,
-              ...feature,
-              ...symbols.meta(feature)
-            }
-          })
-
-          return layer
-        })
-      )
-    })
-  })
-
-  const readProjects = () => new Promise((resolve, reject) => {
-    const uuidPattern = /^[a-f\d]{8}-[a-f\d]{4}-4[a-f\d]{3}-[89AB][a-f\d]{3}-[a-f\d]{12}$/i
-    fs.readdir(PROJECTS, { withFileTypes: true }, (err, files) => {
-      if (err) return reject(err)
-      resolve(files
-        .filter(dirent => dirent.isDirectory())
-        .filter(dirent => uuidPattern.test(dirent.name))
-        .map(dirent => dirent.name)
-        .filter(name => !projects.find(({ id }) => id.includes(name)))
-      )
-    })
-  })
-
-  readProjects().then(projects => projects.map(async project => {
-    const db = levelup(encoding(leveldown(`./db/${project}`), { valueEncoding: 'json' }))
-    const layers = await readLayers(project)
-    const ops = layers.reduce((acc, layer) => {
-      acc.push({ type: 'put', key: layer.id, value: layer })
-      layer.features.reduce((acc, feature) => {
-        acc.push({ type: 'put', key: feature.id, value: feature })
-        return acc
-      }, acc)
-      return acc
-    }, [])
-    await db.batch(ops)
-    await db.close()
-  }))
-
-  await (async () => {
-    const projects = await readProjects()
-    const ps = projects.map(async project => {
-      const meta = JSON.parse(fs.readFileSync(path.join(PROJECTS, project, 'metadata.json'), 'utf8'))
-      const id = `project:${project}`
-      return { type: 'put', key: id, value: { ...meta, id } }
-    })
-    const ops = await Promise.all(ps)
-    await master.batch(ops)
-  })()
+export const open = async () => {
+  const projects = await loadProjects()
+  const openProjects = projects.filter(project => project.open)
+  if (openProjects.length) openProjects.forEach(createWindow)
+  else R.take(1, projects).forEach(createWindow)
 }
