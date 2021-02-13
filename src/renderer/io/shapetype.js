@@ -1,0 +1,14 @@
+export const NULL = 0
+export const POINT = 1
+export const POLYLINE = 3
+export const POLYGON = 5
+export const MULTIPOINT = 8
+export const POINT_Z = 11
+export const POLYLINE_Z = 13
+export const POLYGON_Z = 15
+export const MULTIPOINT_Z = 18
+export const POINT_M = 21
+export const POLYLINE_M = 23
+export const POLYGON_M = 25
+export const MULTIPOINT_M = 28
+export const MULTIPATCH = 31

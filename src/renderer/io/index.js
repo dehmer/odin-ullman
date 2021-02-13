@@ -4,10 +4,12 @@ import unzipper from 'unzipper'
 import { Transform, Writable } from 'stream'
 import uuid from 'uuid-random'
 import { GeoJSON } from 'ol/format'
+import * as geom from 'ol/geom'
 import proj4 from 'proj4'
 import iconv from 'iconv-lite'
 import { decode as decodeDBF } from './dbase'
 import { decode as decodeSHP } from './shapefile'
+import * as ShapeType from './shapetype'
 import * as level from '../storage/level'
 import emitter from '../emitter'
 
@@ -33,20 +35,6 @@ export const loadLayerFiles = async files =>
 // ==> SHAPEFILE
 
 const geoJSON = new GeoJSON()
-
-const feature = (layerUUID, records) => {
-  return new Transform({
-    objectMode: true,
-    transform(chunk, encoding, next) {
-      next(null, {
-        id: `feature:${layerUUID}/${uuid()}`,
-        type: 'Feature',
-        properties: records[chunk.recordNumber - 1],
-        geometry: geoJSON.writeGeometryObject(chunk.geometry)
-      })
-    }
-  })
-}
 
 const batch = layer => new Writable({
   objectMode: true,
@@ -85,6 +73,43 @@ const decode = cpg => cpg
   ? (buffer => iconv.decode(buffer, encoding(cpg)).replace(/\0/g, '').trim())
   : (buffer => buffer.toString().replace(/\0/g, '').trim())
 
+
+const feature = (layerUUID, proj, records) => {
+  const projA = xs => xs.map(proj)
+  const projAA = xs => xs.map(projA)
+
+  const geometry = (shapeType, points) => {
+    switch (shapeType) {
+      case ShapeType.POINT:
+      case ShapeType.POINT_Z:
+      case ShapeType.POINT_M: return new geom.Point(projA(points)[0])
+      case ShapeType.MULTIPOINT:
+      case ShapeType.MULTIPOINT_Z:
+      case ShapeType.MULTIPOINT_M: new geom.MultiPoint(projA(points))
+      case ShapeType.POLYLINE:
+      case ShapeType.POLYLINE_Z:
+      case ShapeType.POLYLINE_M: return points.length === 1
+        ? new geom.LineString(projA(points[0]))
+        : new geom.MultiLineString(projAA(points))
+      case ShapeType.POLYGON:
+      case ShapeType.POLYGON_Z:
+      case ShapeType.POLYGON_M: {
+        return new geom.Polygon(projAA(points))
+      }
+      default: return null
+    }
+  }
+
+  return ({ recordNumber, shapeType, points }) => {
+    return {
+      id: `feature:${layerUUID}/${uuid()}`,
+      type: 'Feature',
+      properties: records[recordNumber - 1],
+      geometry: geoJSON.writeGeometryObject(geometry(shapeType, points))
+    }
+  }
+}
+
 export const loadShapefile = async filename => {
   const directory = await unzipper.Open.file(filename)
   const extensions = ['.shp', '.prj', '.cpg', '.dbf']
@@ -104,8 +129,7 @@ export const loadShapefile = async filename => {
     level.put(layer, { quiet: true })
 
     find('.shp').stream()
-      .pipe(decodeSHP(proj.inverse))
-      .pipe(feature(layerUUID, records))
+      .pipe(decodeSHP(feature(layerUUID, proj.inverse, records)))
       .pipe(batch(layer))
   })
 }
