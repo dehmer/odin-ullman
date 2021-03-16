@@ -1,7 +1,7 @@
 import path from 'path'
 import * as R from 'ramda'
 import unzipper from 'unzipper'
-import { Transform, Writable } from 'stream'
+import { Writable } from 'stream'
 import uuid from 'uuid-random'
 import { GeoJSON } from 'ol/format'
 import * as geom from 'ol/geom'
