@@ -7,17 +7,17 @@ import emitter from '../emitter'
  * Partition initial source into selected/deselected vector sources.
  */
 
-export const deselectedSource = new VectorSource()
-export const selectedSource = new VectorSource()
+export const deselected_ = new VectorSource()
+export const selected_ = new VectorSource()
 
-const sources = [deselectedSource, selectedSource]
+const sources = [deselected_, selected_]
 const featureById = id => sources.reduce((acc, source) => {
   return acc || source.getFeatureById(id)
 }, null)
 
 const addFeature = feature => selection.isSelected(feature.getId())
-  ? selectedSource.addFeature(feature)
-  : deselectedSource.addFeature(feature)
+  ? selected_.addFeature(feature)
+  : deselected_.addFeature(feature)
 
 const moveFeature = (from, to) => feature => {
   if (!feature) return
@@ -29,14 +29,14 @@ source.on('addfeature', ({ feature }) => addFeature(feature))
 
 source.on('removefeature', ({ feature }) => {
   selection.isSelected(feature.getId())
-    ? selectedSource.removeFeature(feature)
-    : deselectedSource.removeFeature(feature)
+    ? selected_.removeFeature(feature)
+    : deselected_.removeFeature(feature)
 })
 
 source.getFeatures().forEach(addFeature)
 
-const movetoSelected = moveFeature(deselectedSource, selectedSource)
-const movetoDeselected = moveFeature(selectedSource, deselectedSource)
+const movetoSelected = moveFeature(deselected_, selected_)
+const movetoDeselected = moveFeature(selected_, deselected_)
 
 emitter.on('selection', ({ selected, deselected }) => {
   selected.map(featureById).forEach(movetoSelected)

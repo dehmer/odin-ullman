@@ -16,7 +16,7 @@ import boxselect from './interaction/boxselect'
 import translate from './interaction/translate'
 import draw from './interaction/draw'
 import modify from './interaction/modify'
-import { deselectedSource, selectedSource } from './partition'
+import { deselected_, selected_ } from './partition'
 import emitter from '../emitter'
 
 
@@ -45,14 +45,14 @@ export const Map = () => {
     ]
 
     const deselectedLayer = new VectorLayer({
-      source: deselectedSource,
-      style: style('default', deselectedSource),
+      source: deselected_,
+      style: style('default', deselected_),
       updateWhileAnimating: true
     })
 
     const selectedLayer = new VectorLayer({
-      source: selectedSource,
-      style: style('selected', selectedSource),
+      source: selected_,
+      style: style('selected', selected_),
       updateWhileAnimating: true
     })
 
@@ -82,7 +82,7 @@ export const Map = () => {
 
     const selectInteraction = select(deselectedLayer, selectedLayer)
     map.addInteraction(selectInteraction)
-    map.addInteraction(boxselect([deselectedSource, selectedSource]))
+    map.addInteraction(boxselect([deselected_, selected_]))
     map.addInteraction(translate(selectInteraction.getFeatures()))
     draw(map)
     map.addInteraction(modify(selectInteraction.getFeatures()))
@@ -104,7 +104,7 @@ export const Map = () => {
     }))
 
     emitter.on('selection', () => {
-      const selectionCount = selectedSource.getFeatures().length
+      const selectionCount = selected_.getFeatures().length
       deselectedLayer.setOpacity(selectionCount ? 0.35 : 1)
     })
 

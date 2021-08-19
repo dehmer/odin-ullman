@@ -108,7 +108,7 @@ const createWindow = async ({ id }) => {
   })
 
   window.on('close', async () => {
-    // don't close project, when quiting
+    // don't close project, when quitting
     if (quitting) return
 
     const project = await master.get(id)

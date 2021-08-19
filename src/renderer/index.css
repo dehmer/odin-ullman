@@ -48,7 +48,7 @@ div {
   pointer-events: none;
 
   /*
-    Give WebKit a chance to calculate determine explicit height.
+    Give WebKit a chance to calculate explicit height.
     This is necessary to stretch children to desired height.
   */
   height: calc(100vh - 4em);
