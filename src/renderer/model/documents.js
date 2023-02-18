@@ -91,7 +91,7 @@ documents.symbol = symbol => {
 /**
  *
  */
-documents.place = place => ({
+ documents.place = place => ({
   id: place.id,
   scope: 'place',
   text: place.display_name,

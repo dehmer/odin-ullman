@@ -169,7 +169,6 @@ const exists = prefix => new Promise((resolve, reject) => {
 const readSymbols = async () => {
   if (await exists('symbol:')) return
 
-  console.log('loading symbols...')
   // Populate storage with symbols if missing:
   const id = symbol => `symbol:${symbol.sidc.substring(0, 10)}`
   await master.batch(Object.values(symbols.symbols).map(symbol => {
@@ -209,7 +208,7 @@ const importProjects = async projects => {
           layer.features = layer.features.map(feature => {
             delete feature.id
             delete feature.properties.layerId
-            if (feature.properties.locked) { feature.locked = true;  delete feature.properties.locked }
+            if (feature.properties.locked) { feature.locked = true; delete feature.properties.locked }
             if (feature.properties.hidden) { feature.hidden = true; delete feature.properties.hidden }
             return {
               id: `feature:${layer.id.split(':')[1]}/${uuid()}`,

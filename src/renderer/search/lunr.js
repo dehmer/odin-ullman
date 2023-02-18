@@ -15,7 +15,7 @@ const index = (name, scopes) => {
 
   const refresh = async ops => {
     const skip = index && ops && ops.length && !ops.find(includes)
-    if (skip) return /* noting to do */
+    if (skip) return /* nothing to do */
 
     console.time(`[lunr:${name}] re-index`)
     const reducer = async (accp, scope) => {
